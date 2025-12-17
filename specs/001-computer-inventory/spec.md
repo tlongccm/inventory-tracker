@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-computer-inventory`
 **Created**: 2025-12-15
-**Status**: Draft
+**Status**: ✅ Implemented
 **Input**: User description: "Design a simple equipment inventory tracking app that allows staff to manage and audit all equipment (PCs, monitors, scanners, printers) used within the organization."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -136,7 +136,7 @@ As a staff member, I want to view the assignment history of a computer so that I
 - **FR-008**: System MUST require Equipment Type when creating a new record. Serial Number is optional.
 
 **PC-Specific Fields**
-- **FR-009**: For PC equipment type, system MUST store: Computer Subtype (Desktop/Laptop), CPU Type, CPU Speed, CPU Generation, Operating System, RAM, Storage Capacity, Video Card, Display Resolution, and MAC Address.
+- **FR-009**: For PC equipment type, system MUST store: Computer Subtype (Desktop/Laptop), CPU Model, CPU Speed, Operating System, RAM, Storage Capacity, Video Card, Display Resolution, and MAC Address.
 - **FR-009a**: System MUST validate that Computer Subtype is one of: Desktop, Laptop (only for PC equipment type).
 
 **User Assignment Fields**

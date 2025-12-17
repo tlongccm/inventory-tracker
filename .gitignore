@@ -51,6 +51,7 @@ yarn-error.log*
 # Build outputs
 frontend/build/
 frontend/dist/
+frontend/.vite/
 
 # Testing
 .coverage

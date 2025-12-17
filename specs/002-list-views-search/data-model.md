@@ -23,8 +23,8 @@ The existing `Equipment` model already contains all required fields. No modifica
 |------------|--------|
 | Always Visible | `equipment_id`, `computer_subtype`, `primary_user`, `equipment_name`, `status` |
 | Summary | `manufacturer`, `model`, `location`, `notes` |
-| Machine Spec | `cpu_type`, `cpu_speed`, `cpu_generation`, `operating_system`, `ram`, `storage`, `video_card`, `display_resolution`, `mac_address`, `serial_number` |
-| Machine Performance | `cpu_score`, `memory_score`, `disk_score`, `overall_rating` |
+| Machine Spec | `cpu_model`, `ram`, `storage`, `operating_system`, `serial_number`, `mac_address` |
+| Machine Performance | `cpu_score`, `score_2d`, `score_3d`, `memory_score`, `disk_score`, `overall_rating` |
 | Assignment | `assignment_date`, `usage_type`, `ip_address` |
 
 ### AssignmentHistory (Backend - SQLAlchemy)
@@ -151,7 +151,7 @@ export const VIEW_GROUP_COLUMNS: Record<ViewGroupKey, ColumnDefinition[]> = {
     { key: 'notes', label: 'Notes', sortable: false },
   ],
   machineSpec: [
-    { key: 'cpu_type', label: 'CPU', sortable: true },
+    { key: 'cpu_model', label: 'CPU Model', sortable: true },
     { key: 'ram', label: 'RAM', sortable: true },
     { key: 'storage', label: 'Storage', sortable: true },
     { key: 'operating_system', label: 'OS', sortable: true },
@@ -160,6 +160,8 @@ export const VIEW_GROUP_COLUMNS: Record<ViewGroupKey, ColumnDefinition[]> = {
   ],
   machinePerformance: [
     { key: 'cpu_score', label: 'CPU Score', sortable: true },
+    { key: 'score_2d', label: '2D Score', sortable: true },
+    { key: 'score_3d', label: '3D Score', sortable: true },
     { key: 'memory_score', label: 'RAM Score', sortable: true },
     { key: 'disk_score', label: 'Disk Score', sortable: true },
     { key: 'overall_rating', label: 'Overall', sortable: true },

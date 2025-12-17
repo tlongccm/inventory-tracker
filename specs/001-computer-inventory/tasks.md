@@ -354,12 +354,12 @@ Work through phases in order:
 | 6 | US4 - Import/Export | 10 | Complete |
 | 7 | US5 - Assignment History | 6 | Complete |
 | 8 | Soft Delete & Admin | 10 | Complete |
-| 9 | Schema Updates | 13 | Pending |
-| 10 | Equipment Reassignment UI (NEW) | 5 | **Pending** |
-| 11 | Polish | 5 | Pending |
+| 9 | Schema Updates | 13 | Complete |
+| 10 | Equipment Reassignment UI | 5 | Complete |
+| 11 | Polish | 5 | Complete |
 | **Total** | | **91** | |
 
-**New Tasks Added (Phase 10)**: T081-T085 for Equipment Reassignment UI feature - allows users to select existing equipment and reassign it with machine info copied over
+**All Phases Complete**: Full implementation of Equipment Inventory Tracker including reassignment UI feature
 
 ---
 

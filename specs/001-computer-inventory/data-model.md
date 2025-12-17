@@ -37,9 +37,8 @@ The primary entity representing a piece of equipment (PC, Monitor, Scanner, Prin
 | Field | Type | Required | Description | Validation |
 |-------|------|----------|-------------|------------|
 | **computer_subtype** | Enum | No | Desktop or Laptop (PC only) | One of: Desktop, Laptop |
-| **cpu_type** | String(100) | No | CPU model name | - |
+| **cpu_model** | String(100) | No | CPU model name | - |
 | **cpu_speed** | String(50) | No | CPU speed (e.g., "3.5 GHz") | - |
-| **cpu_generation** | String(50) | No | CPU generation (e.g., "12th Gen") | - |
 | **operating_system** | String(100) | No | OS name and version | - |
 | **ram** | String(50) | No | RAM capacity (e.g., "16 GB") | - |
 | **storage** | String(100) | No | HDD/SSD capacity | - |
@@ -249,9 +248,8 @@ class Equipment(Base):
 
     # PC-specific fields (nullable for non-PC types)
     computer_subtype = Column(Enum(ComputerSubtype))  # Desktop/Laptop
-    cpu_type = Column(String(100))
+    cpu_model = Column(String(100))
     cpu_speed = Column(String(50))
-    cpu_generation = Column(String(50))
     operating_system = Column(String(100))
     ram = Column(String(50))
     storage = Column(String(100))
@@ -369,9 +367,8 @@ For import/export, use these column headers:
 | Model | model | |
 | Manufacturer | manufacturer | |
 | Computer Subtype | computer_subtype | PC only: Desktop or Laptop |
-| CPU Type | cpu_type | |
+| CPU Model | cpu_model | |
 | CPU Speed | cpu_speed | |
-| CPU Generation | cpu_generation | |
 | Operating System | operating_system | |
 | RAM | ram | |
 | Storage | storage | |
