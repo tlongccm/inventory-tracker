@@ -1,50 +1,145 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+==================
+Version Change: 0.0.0 → 1.0.0 (MAJOR - Initial constitution adoption)
+
+Modified Principles: N/A (initial version)
+
+Added Sections:
+- Core Principles (5 principles)
+- Development Workflow
+- Governance
+
+Removed Sections: N/A (initial version)
+
+Templates Requiring Updates:
+- .specify/templates/plan-template.md ✅ (Constitution Check section exists, compatible)
+- .specify/templates/spec-template.md ✅ (requirements format compatible)
+- .specify/templates/tasks-template.md ✅ (task structure compatible)
+
+Follow-up TODOs: None
+-->
+
+# Inventory Tracker Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Simplicity First
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All solutions MUST start with the simplest viable approach. Features MUST NOT be added
+speculatively. Code MUST be readable and self-explanatory without excessive comments.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+- YAGNI (You Aren't Gonna Need It) applies to all decisions
+- Prefer explicit code over clever abstractions
+- Add complexity only when current approach demonstrably fails
+- Three similar lines of code is better than a premature abstraction
+- Justify every dependency added to the project
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale**: Complexity compounds. Simple code is easier to debug, test, modify, and
+understand. Over-engineering creates maintenance burden without delivering value.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Web Application Structure
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+The project follows a clear frontend/backend separation with well-defined contracts.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- Backend: Python with FastAPI providing REST API endpoints
+- Frontend: React for user interface
+- Communication: JSON over HTTP with documented API contracts
+- Each layer MUST be independently deployable and testable
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale**: Clear separation enables independent development, testing, and scaling of
+frontend and backend components while maintaining system coherence through contracts.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. Data Integrity
+
+All data mutations MUST be validated at system boundaries. The inventory system MUST
+maintain accurate counts and audit trails.
+
+- Input validation at API endpoints before processing
+- Database constraints enforce data integrity rules
+- All inventory changes MUST be traceable (who, what, when)
+- Error states MUST be handled explicitly, not silently ignored
+
+**Rationale**: An inventory system's core value is accurate data. Invalid data propagating
+through the system causes cascading failures and erodes trust.
+
+### IV. Pragmatic Testing
+
+Tests are recommended but not mandatory. When tests exist, they MUST provide value.
+
+- Focus testing effort on critical paths and complex logic
+- Avoid testing framework code or trivial getters/setters
+- Integration tests preferred over excessive unit test coverage
+- Manual testing acceptable for UI and simple CRUD operations
+- When bugs are found, consider adding a test to prevent regression
+
+**Rationale**: Test coverage is not an end goal. Tests should catch real bugs and enable
+confident refactoring, not add maintenance burden for ceremony's sake.
+
+### V. Incremental Delivery
+
+Features MUST be deliverable in small, working increments. Each increment MUST provide
+user value independently.
+
+- User stories MUST be independently testable and deployable
+- Avoid large PRs that touch many files across multiple concerns
+- Prefer working software over comprehensive documentation
+- Ship early, gather feedback, iterate
+
+**Rationale**: Small increments reduce risk, enable faster feedback, and maintain momentum.
+Large batches hide problems and delay value delivery.
+
+## Development Workflow
+
+### Branching Strategy
+
+- `main` branch MUST always be deployable
+- Feature branches created from `main` using format: `feature/description`
+- Bug fixes use format: `fix/description`
+- Merge to `main` via pull request
+
+### Code Review
+
+- All changes to `main` MUST be reviewed before merge
+- Reviews focus on: correctness, simplicity, maintainability
+- Reviewer SHOULD suggest simpler alternatives when complexity detected
+- Author resolves or discusses all comments before merge
+
+### Commit Standards
+
+- Commits MUST have descriptive messages explaining "why" not just "what"
+- Prefer small, focused commits over large omnibus commits
+- Each commit SHOULD leave the codebase in a working state
+
+### Deployment
+
+- Deployments from `main` branch only
+- Database migrations MUST be backward compatible during rollout
+- Feature flags for risky changes enabling quick rollback
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution establishes the foundational principles for the Inventory Tracker project.
+All development decisions, code reviews, and architectural choices MUST align with these
+principles.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### Amendment Process
+
+1. Proposed amendments documented with rationale
+2. Team discussion and consensus required
+3. Constitution version incremented per semantic versioning
+4. All dependent templates reviewed for consistency
+
+### Compliance
+
+- PR reviews MUST verify alignment with constitution principles
+- Complexity that violates Simplicity First MUST be explicitly justified
+- Violations without justification block merge
+
+### Versioning Policy
+
+- MAJOR: Principle removal or fundamental redefinition
+- MINOR: New principle or significant section expansion
+- PATCH: Clarifications, wording improvements, typo fixes
+
+**Version**: 1.0.0 | **Ratified**: 2025-12-15 | **Last Amended**: 2025-12-15

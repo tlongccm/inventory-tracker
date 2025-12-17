@@ -1,0 +1,307 @@
+# OpenAPI Contract Additions: Configurable List Views and Universal Search
+# Feature: 002-list-views-search
+# Date: 2025-12-16
+# Status: Implemented (client-side search, server-side search endpoint optional)
+#
+# NOTE: This feature is primarily frontend-focused. The existing API endpoints
+# already return all required fields. This contract documents minor enhancements
+# to support server-side search (optional optimization for large datasets).
+#
+# Implementation Status:
+# - GET /api/v1/equipment: Already exists and returns all fields
+# - GET /api/v1/equipment/search: NOT IMPLEMENTED (client-side search used instead)
+# - GET /api/v1/equipment/{id}/history: Already exists, includes current assignment
+
+openapi: 3.0.3
+info:
+  title: Equipment Inventory API - List Views & Search Enhancement
+  description: |
+    API contract additions for configurable list views and universal search.
+
+    **Key Decision**: Search is implemented client-side for responsiveness.
+    Server-side search endpoint is documented for future scalability but
+    not required for initial implementation.
+  version: 2.0.0
+
+paths:
+  /api/v1/equipment:
+    get:
+      summary: List all equipment (existing endpoint - no changes)
+      description: |
+        Returns all equipment records with all fields.
+        Client-side filtering and column visibility handled in frontend.
+      parameters:
+        - name: include_deleted
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include soft-deleted records
+        - name: equipment_type
+          in: query
+          schema:
+            type: string
+            enum: [PC, Monitor, Scanner, Printer]
+          description: Filter by equipment type
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Active, Inactive, Decommissioned, In Repair, In Storage]
+          description: Filter by status
+      responses:
+        '200':
+          description: List of equipment
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Equipment'
+
+  /api/v1/equipment/search:
+    get:
+      summary: Universal search across equipment (optional - future scalability)
+      description: |
+        Search across all equipment fields. Supports plain text and regex modes.
+
+        **NOTE**: Initial implementation uses client-side search. This endpoint
+        is documented for future use when dataset grows beyond client-side limits.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Search query string
+        - name: regex
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Treat query as regular expression
+        - name: include_deleted
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include soft-deleted records in search
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid regex pattern
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchError'
+
+  /api/v1/equipment/{equipment_id}/assignment-history:
+    get:
+      summary: Get assignment history (existing - response enhanced)
+      description: |
+        Returns assignment history for equipment. Response now explicitly
+        indicates whether to include current assignment from equipment record.
+      parameters:
+        - name: equipment_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Equipment ID (e.g., PC-0001)
+        - name: include_current
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include current assignment as first record
+      responses:
+        '200':
+          description: Assignment history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentHistoryResponse'
+        '404':
+          description: Equipment not found
+
+components:
+  schemas:
+    Equipment:
+      type: object
+      description: Full equipment record with all fields for all view groups
+      properties:
+        # Always Visible Fields
+        equipment_id:
+          type: string
+          example: "PC-0001"
+        computer_subtype:
+          type: string
+          enum: [Desktop, Laptop]
+          nullable: true
+        primary_user:
+          type: string
+          nullable: true
+        equipment_name:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [Active, Inactive, Decommissioned, In Repair, In Storage]
+
+        # Summary View Fields
+        manufacturer:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+        # Machine Spec View Fields
+        cpu_type:
+          type: string
+          nullable: true
+        cpu_speed:
+          type: string
+          nullable: true
+        cpu_generation:
+          type: string
+          nullable: true
+        operating_system:
+          type: string
+          nullable: true
+        ram:
+          type: string
+          nullable: true
+        storage:
+          type: string
+          nullable: true
+        video_card:
+          type: string
+          nullable: true
+        display_resolution:
+          type: string
+          nullable: true
+        mac_address:
+          type: string
+          nullable: true
+        serial_number:
+          type: string
+          nullable: true
+
+        # Machine Performance View Fields (PassMark)
+        cpu_score:
+          type: integer
+          nullable: true
+          description: PassMark CPU Score
+        memory_score:
+          type: integer
+          nullable: true
+          description: PassMark RAM Score
+        disk_score:
+          type: integer
+          nullable: true
+          description: PassMark Disk Score
+        overall_rating:
+          type: integer
+          nullable: true
+          description: PassMark Overall Rating
+
+        # Assignment View Fields
+        assignment_date:
+          type: string
+          format: date
+          nullable: true
+        usage_type:
+          type: string
+          enum: [Personal, Work]
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+
+        # Metadata
+        equipment_type:
+          type: string
+          enum: [PC, Monitor, Scanner, Printer]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_deleted:
+          type: boolean
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Equipment'
+        total:
+          type: integer
+          description: Total number of matching records
+        query:
+          type: string
+          description: The search query used
+        regex_mode:
+          type: boolean
+          description: Whether regex mode was used
+
+    SearchError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Invalid regex pattern"
+        details:
+          type: string
+          example: "Unterminated character class at position 5"
+
+    AssignmentHistoryResponse:
+      type: object
+      properties:
+        equipment_id:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentHistoryRecord'
+
+    AssignmentHistoryRecord:
+      type: object
+      properties:
+        user:
+          type: string
+          nullable: true
+        usage_type:
+          type: string
+          nullable: true
+        equipment_name:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+          description: Null for current assignment
+        is_current:
+          type: boolean
+          description: True if this is the current assignment

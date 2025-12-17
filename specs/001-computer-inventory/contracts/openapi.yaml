@@ -1,0 +1,823 @@
+openapi: 3.0.3
+info:
+  title: Computer Inventory Tracker API
+  description: REST API for managing computer inventory records
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+
+paths:
+  /computers:
+    get:
+      summary: List all computers
+      description: Returns a list of all computers with optional filtering and sorting
+      operationId: listComputers
+      tags:
+        - Computers
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/Status'
+          description: Filter by status
+        - name: computer_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ComputerType'
+          description: Filter by computer type
+        - name: usage_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/UsageType'
+          description: Filter by usage type (Personal or Work)
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Filter by location (partial match)
+        - name: primary_user
+          in: query
+          schema:
+            type: string
+          description: Filter by primary user (partial match)
+        - name: model
+          in: query
+          schema:
+            type: string
+          description: Filter by model (partial match)
+        - name: min_rating
+          in: query
+          schema:
+            type: integer
+          description: Filter by minimum overall rating
+        - name: max_rating
+          in: query
+          schema:
+            type: integer
+          description: Filter by maximum overall rating
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [computer_name, model, primary_user, status, overall_rating, created_at]
+            default: computer_name
+          description: Field to sort by
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order
+        - name: include_deleted
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include soft-deleted records (admin function)
+      responses:
+        '200':
+          description: List of computers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComputerListItem'
+
+    post:
+      summary: Create a new computer
+      description: Add a new computer to the inventory
+      operationId: createComputer
+      tags:
+        - Computers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComputerCreate'
+      responses:
+        '201':
+          description: Computer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Computer'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '409':
+          description: Serial number already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /computers/{serial_number}:
+    get:
+      summary: Get computer by serial number
+      description: Returns full details of a specific computer
+      operationId: getComputer
+      tags:
+        - Computers
+      parameters:
+        - name: serial_number
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Computer serial number
+      responses:
+        '200':
+          description: Computer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Computer'
+        '404':
+          description: Computer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update a computer
+      description: Update an existing computer record
+      operationId: updateComputer
+      tags:
+        - Computers
+      parameters:
+        - name: serial_number
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Computer serial number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComputerUpdate'
+      responses:
+        '200':
+          description: Computer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Computer'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: Computer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Soft delete a computer
+      description: Mark a computer as deleted (can be restored via admin)
+      operationId: deleteComputer
+      tags:
+        - Computers
+      parameters:
+        - name: serial_number
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Computer serial number
+      responses:
+        '204':
+          description: Computer soft-deleted successfully
+        '404':
+          description: Computer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /computers/{serial_number}/restore:
+    post:
+      summary: Restore a soft-deleted computer
+      description: Restore a previously deleted computer (admin function)
+      operationId: restoreComputer
+      tags:
+        - Admin
+      parameters:
+        - name: serial_number
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Computer serial number
+      responses:
+        '200':
+          description: Computer restored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Computer'
+        '404':
+          description: Computer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Computer is not deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /computers/export:
+    get:
+      summary: Export computers to CSV
+      description: Download all computers as a CSV file (excludes soft-deleted)
+      operationId: exportComputers
+      tags:
+        - Import/Export
+      parameters:
+        - name: include_deleted
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include soft-deleted records in export
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="computers_export_2025-12-15.csv"
+
+  /computers/import:
+    post:
+      summary: Import computers from CSV
+      description: Import computer records from a CSV file. Creates new records or updates existing by serial number.
+      operationId: importComputers
+      tags:
+        - Import/Export
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file to import
+              required:
+                - file
+      responses:
+        '200':
+          description: Import completed (may contain partial failures)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          description: Invalid file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/deleted:
+    get:
+      summary: List soft-deleted computers
+      description: Returns all soft-deleted computers for admin recovery
+      operationId: listDeletedComputers
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: List of deleted computers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComputerListItem'
+
+  /computers/{serial_number}/history:
+    get:
+      summary: Get assignment history for a computer
+      description: Returns the chronological list of past assignments for a computer
+      operationId: getComputerHistory
+      tags:
+        - History
+      parameters:
+        - name: serial_number
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Computer serial number
+      responses:
+        '200':
+          description: Assignment history list (newest first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssignmentHistoryItem'
+        '404':
+          description: Computer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    EquipmentType:
+      type: string
+      enum: [PC, Monitor, Scanner, Printer]
+      description: Type of equipment (determines ID prefix)
+
+    ComputerSubtype:
+      type: string
+      enum: [Desktop, Laptop]
+      description: Subtype for PC equipment only
+
+    Status:
+      type: string
+      enum: [Active, Inactive, Decommissioned, In Repair, In Storage]
+
+    UsageType:
+      type: string
+      enum: [Personal, Work]
+      description: Whether equipment is for personal or work use
+
+    EquipmentListItem:
+      type: object
+      description: Summary view of equipment for list display
+      properties:
+        equipment_id:
+          type: string
+          description: Auto-generated equipment ID ({TYPE}-NNNN)
+        equipment_type:
+          $ref: '#/components/schemas/EquipmentType'
+        serial_number:
+          type: string
+        equipment_name:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        primary_user:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/Status'
+        is_deleted:
+          type: boolean
+      required:
+        - equipment_id
+        - equipment_type
+        - serial_number
+
+    Equipment:
+      type: object
+      description: Full equipment record with all fields
+      properties:
+        id:
+          type: integer
+        equipment_id:
+          type: string
+          description: Auto-generated equipment ID ({TYPE}-NNNN)
+        equipment_type:
+          $ref: '#/components/schemas/EquipmentType'
+        serial_number:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        # Common equipment fields
+        model:
+          type: string
+          nullable: true
+        manufacturer:
+          type: string
+          nullable: true
+        manufacturing_date:
+          type: string
+          format: date
+          nullable: true
+        acquisition_date:
+          type: string
+          format: date
+          nullable: true
+          description: Date equipment was acquired by the organization
+        location:
+          type: string
+          nullable: true
+          description: Physical location of the equipment
+        cost:
+          type: number
+          format: decimal
+          nullable: true
+        # PC-specific fields (nullable for non-PC types)
+        computer_subtype:
+          $ref: '#/components/schemas/ComputerSubtype'
+        cpu_type:
+          type: string
+          nullable: true
+        cpu_speed:
+          type: string
+          nullable: true
+        cpu_generation:
+          type: string
+          nullable: true
+        operating_system:
+          type: string
+          nullable: true
+        ram:
+          type: string
+          nullable: true
+        storage:
+          type: string
+          nullable: true
+        video_card:
+          type: string
+          nullable: true
+        display_resolution:
+          type: string
+          nullable: true
+        mac_address:
+          type: string
+          nullable: true
+        # Performance fields
+        cpu_score:
+          type: integer
+          nullable: true
+        score_2d:
+          type: integer
+          nullable: true
+        score_3d:
+          type: integer
+          nullable: true
+        memory_score:
+          type: integer
+          nullable: true
+        disk_score:
+          type: integer
+          nullable: true
+        overall_rating:
+          type: integer
+          nullable: true
+        # Assignment fields
+        equipment_name:
+          type: string
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+        assignment_date:
+          type: string
+          format: date
+          nullable: true
+        primary_user:
+          type: string
+          nullable: true
+        usage_type:
+          $ref: '#/components/schemas/UsageType'
+        status:
+          $ref: '#/components/schemas/Status'
+        # Notes
+        notes:
+          type: string
+          nullable: true
+      required:
+        - id
+        - equipment_id
+        - equipment_type
+        - serial_number
+        - created_at
+        - updated_at
+        - is_deleted
+
+    EquipmentCreate:
+      type: object
+      description: Request body for creating new equipment
+      properties:
+        equipment_type:
+          $ref: '#/components/schemas/EquipmentType'
+        serial_number:
+          type: string
+          maxLength: 100
+          description: Optional - equipment can be created without serial number
+        model:
+          type: string
+          maxLength: 200
+        manufacturer:
+          type: string
+          maxLength: 200
+        manufacturing_date:
+          type: string
+          format: date
+        acquisition_date:
+          type: string
+          format: date
+          description: Date equipment was acquired by the organization
+        location:
+          type: string
+          maxLength: 200
+          description: Physical location of the equipment
+        cost:
+          type: number
+          format: decimal
+          minimum: 0
+        computer_subtype:
+          $ref: '#/components/schemas/ComputerSubtype'
+        cpu_type:
+          type: string
+          maxLength: 100
+        cpu_speed:
+          type: string
+          maxLength: 50
+        cpu_generation:
+          type: string
+          maxLength: 50
+        operating_system:
+          type: string
+          maxLength: 100
+        ram:
+          type: string
+          maxLength: 50
+        storage:
+          type: string
+          maxLength: 100
+        video_card:
+          type: string
+          maxLength: 200
+        display_resolution:
+          type: string
+          maxLength: 50
+        mac_address:
+          type: string
+          maxLength: 17
+        cpu_score:
+          type: integer
+          minimum: 0
+        score_2d:
+          type: integer
+          minimum: 0
+        score_3d:
+          type: integer
+          minimum: 0
+        memory_score:
+          type: integer
+          minimum: 0
+        disk_score:
+          type: integer
+          minimum: 0
+        overall_rating:
+          type: integer
+          minimum: 0
+        equipment_name:
+          type: string
+          maxLength: 100
+        ip_address:
+          type: string
+          maxLength: 45
+        assignment_date:
+          type: string
+          format: date
+        primary_user:
+          type: string
+          maxLength: 200
+        usage_type:
+          $ref: '#/components/schemas/UsageType'
+        status:
+          $ref: '#/components/schemas/Status'
+        notes:
+          type: string
+      required:
+        - equipment_type
+
+    EquipmentUpdate:
+      type: object
+      description: Request body for updating equipment (all fields optional)
+      properties:
+        model:
+          type: string
+          maxLength: 200
+        manufacturer:
+          type: string
+          maxLength: 200
+        manufacturing_date:
+          type: string
+          format: date
+        acquisition_date:
+          type: string
+          format: date
+          description: Date equipment was acquired by the organization
+        location:
+          type: string
+          maxLength: 200
+          description: Physical location of the equipment
+        cost:
+          type: number
+          format: decimal
+          minimum: 0
+        computer_subtype:
+          $ref: '#/components/schemas/ComputerSubtype'
+        cpu_type:
+          type: string
+          maxLength: 100
+        cpu_speed:
+          type: string
+          maxLength: 50
+        cpu_generation:
+          type: string
+          maxLength: 50
+        operating_system:
+          type: string
+          maxLength: 100
+        ram:
+          type: string
+          maxLength: 50
+        storage:
+          type: string
+          maxLength: 100
+        video_card:
+          type: string
+          maxLength: 200
+        display_resolution:
+          type: string
+          maxLength: 50
+        mac_address:
+          type: string
+          maxLength: 17
+        cpu_score:
+          type: integer
+          minimum: 0
+        score_2d:
+          type: integer
+          minimum: 0
+        score_3d:
+          type: integer
+          minimum: 0
+        memory_score:
+          type: integer
+          minimum: 0
+        disk_score:
+          type: integer
+          minimum: 0
+        overall_rating:
+          type: integer
+          minimum: 0
+        equipment_name:
+          type: string
+          maxLength: 100
+        ip_address:
+          type: string
+          maxLength: 45
+        assignment_date:
+          type: string
+          format: date
+        primary_user:
+          type: string
+          maxLength: 200
+        usage_type:
+          $ref: '#/components/schemas/UsageType'
+        status:
+          $ref: '#/components/schemas/Status'
+        notes:
+          type: string
+
+    ImportResult:
+      type: object
+      description: Result of CSV import operation
+      properties:
+        total_rows:
+          type: integer
+          description: Total rows in CSV
+        created:
+          type: integer
+          description: Number of new records created
+        updated:
+          type: integer
+          description: Number of existing records updated
+        restored:
+          type: integer
+          description: Number of soft-deleted records restored
+        failed:
+          type: integer
+          description: Number of rows that failed
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              serial_number:
+                type: string
+              error:
+                type: string
+          description: Details of failed rows
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+        - detail
+
+    ValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  type: string
+              msg:
+                type: string
+              type:
+                type: string
+
+    AssignmentHistoryItem:
+      type: object
+      description: A single assignment history record
+      properties:
+        id:
+          type: integer
+        previous_user:
+          type: string
+          nullable: true
+          description: User who was assigned before the change
+        previous_usage_type:
+          $ref: '#/components/schemas/UsageType'
+        previous_equipment_name:
+          type: string
+          nullable: true
+          description: Equipment name before the change
+        start_date:
+          type: string
+          format: date
+          nullable: true
+          description: When this assignment started
+        end_date:
+          type: string
+          format: date
+          description: When this assignment ended (the change date)
+        created_at:
+          type: string
+          format: date-time
+          description: When this history record was created
+      required:
+        - id
+        - end_date
+        - created_at
+
+tags:
+  - name: Computers
+    description: Computer inventory CRUD operations
+  - name: Import/Export
+    description: CSV import and export operations
+  - name: Admin
+    description: Administrative functions (soft-delete recovery)
+  - name: History
+    description: Assignment history tracking
