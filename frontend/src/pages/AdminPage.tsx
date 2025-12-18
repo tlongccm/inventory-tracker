@@ -1,35 +1,64 @@
 /**
- * AdminPage - admin section for viewing and restoring deleted equipment.
+ * AdminPage - admin section for viewing and restoring deleted equipment and software.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import type { EquipmentListItem } from '../types/equipment';
-import { listDeletedEquipment, restoreEquipment } from '../services/api';
+import type { SoftwareListItem } from '../types/software';
+import {
+  listDeletedEquipment,
+  restoreEquipment,
+  listDeletedSoftware,
+  restoreSoftware,
+} from '../services/api';
 import AdminPanel from '../components/AdminPanel';
+import SoftwareAdminPanel from '../components/SoftwareAdminPanel';
 
 export default function AdminPage() {
+  // Equipment state
   const [equipment, setEquipment] = useState<EquipmentListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [equipmentLoading, setEquipmentLoading] = useState(true);
+
+  // Software state
+  const [software, setSoftware] = useState<SoftwareListItem[]>([]);
+  const [softwareLoading, setSoftwareLoading] = useState(true);
+
+  // Shared error state
   const [error, setError] = useState<string | null>(null);
+
+  // Active tab
+  const [activeTab, setActiveTab] = useState<'equipment' | 'software'>('equipment');
 
   const loadDeletedEquipment = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setEquipmentLoading(true);
       const data = await listDeletedEquipment();
       setEquipment(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load deleted equipment');
     } finally {
-      setLoading(false);
+      setEquipmentLoading(false);
+    }
+  }, []);
+
+  const loadDeletedSoftware = useCallback(async () => {
+    try {
+      setSoftwareLoading(true);
+      const data = await listDeletedSoftware();
+      setSoftware(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load deleted software');
+    } finally {
+      setSoftwareLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadDeletedEquipment();
-  }, [loadDeletedEquipment]);
+    loadDeletedSoftware();
+  }, [loadDeletedEquipment, loadDeletedSoftware]);
 
-  const handleRestore = async (equipmentId: string) => {
+  const handleRestoreEquipment = async (equipmentId: string) => {
     if (!window.confirm(`Are you sure you want to restore this equipment?`)) {
       return;
     }
@@ -42,9 +71,22 @@ export default function AdminPage() {
     }
   };
 
+  const handleRestoreSoftware = async (id: number) => {
+    if (!window.confirm(`Are you sure you want to restore this software?`)) {
+      return;
+    }
+
+    try {
+      await restoreSoftware(id);
+      loadDeletedSoftware();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to restore software');
+    }
+  };
+
   return (
     <div>
-      <h1>Admin - Deleted Equipment</h1>
+      <h1>Admin - Deleted Items</h1>
 
       {error && (
         <div className="error" style={{ marginBottom: 16 }}>
@@ -56,14 +98,54 @@ export default function AdminPage() {
       )}
 
       <p style={{ marginBottom: 16 }}>
-        This section shows soft-deleted equipment that can be restored.
+        This section shows soft-deleted items that can be restored.
       </p>
 
-      <AdminPanel
-        equipment={equipment}
-        loading={loading}
-        onRestore={handleRestore}
-      />
+      {/* Tab Navigation */}
+      <div style={{ marginBottom: 16 }}>
+        <button
+          onClick={() => setActiveTab('equipment')}
+          style={{
+            marginRight: 8,
+            padding: '8px 16px',
+            backgroundColor: activeTab === 'equipment' ? '#1976d2' : '#e0e0e0',
+            color: activeTab === 'equipment' ? 'white' : 'black',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+          }}
+        >
+          Deleted Equipment ({equipment.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('software')}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: activeTab === 'software' ? '#1976d2' : '#e0e0e0',
+            color: activeTab === 'software' ? 'white' : 'black',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+          }}
+        >
+          Deleted Software ({software.length})
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'equipment' ? (
+        <AdminPanel
+          equipment={equipment}
+          loading={equipmentLoading}
+          onRestore={handleRestoreEquipment}
+        />
+      ) : (
+        <SoftwareAdminPanel
+          software={software}
+          loading={softwareLoading}
+          onRestore={handleRestoreSoftware}
+        />
+      )}
     </div>
   );
 }
