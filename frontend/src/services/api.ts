@@ -23,6 +23,25 @@ import type {
   SoftwareImportResult,
 } from '../types/software';
 
+import type {
+  Category,
+  CategoryCreate,
+  CategoryUpdate,
+  SubcategoryCreate,
+  SubcategoryUpdate,
+  Subcategory,
+  UsageCount,
+} from '../types/category';
+
+import type {
+  Subscription,
+  SubscriptionListItem,
+  SubscriptionCreate,
+  SubscriptionUpdate,
+  SubscriptionFilters,
+  SubscriptionImportResult,
+} from '../types/subscription';
+
 const API_BASE_URL = '/api/v1';
 
 /**
@@ -79,7 +98,9 @@ function buildQueryString(filters: EquipmentFilters): string {
   return queryString ? `?${queryString}` : '';
 }
 
-// Equipment API methods
+// ============================================================================
+// Equipment API Methods
+// ============================================================================
 
 export async function listEquipment(
   filters: EquipmentFilters = {}
@@ -288,6 +309,184 @@ export async function importSoftware(file: File): Promise<SoftwareImportResult> 
   formData.append('file', file);
 
   const response = await fetch(`${API_BASE_URL}/software/import`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json().catch(() => ({
+      detail: `HTTP error ${response.status}`,
+    }));
+    throw new Error(error.detail);
+  }
+
+  return response.json();
+}
+
+// ============================================================================
+// Category API Methods
+// ============================================================================
+
+export async function listCategories(
+  includeInactive = false
+): Promise<Category[]> {
+  const query = includeInactive ? '?include_inactive=true' : '';
+  return fetchApi<Category[]>(`/categories${query}`);
+}
+
+export async function createCategory(data: CategoryCreate): Promise<Category> {
+  return fetchApi<Category>('/categories', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateCategory(
+  id: number,
+  data: CategoryUpdate
+): Promise<Category> {
+  return fetchApi<Category>(`/categories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCategory(id: number): Promise<void> {
+  return fetchApi<void>(`/categories/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getCategoryUsage(id: number): Promise<UsageCount> {
+  return fetchApi<UsageCount>(`/categories/${id}/usage`);
+}
+
+export async function createSubcategory(
+  categoryId: number,
+  data: SubcategoryCreate
+): Promise<Subcategory> {
+  return fetchApi<Subcategory>(`/categories/${categoryId}/subcategories`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSubcategory(
+  id: number,
+  data: SubcategoryUpdate
+): Promise<Subcategory> {
+  return fetchApi<Subcategory>(`/subcategories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSubcategory(id: number): Promise<void> {
+  return fetchApi<void>(`/subcategories/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getSubcategoryUsage(id: number): Promise<UsageCount> {
+  return fetchApi<UsageCount>(`/subcategories/${id}/usage`);
+}
+
+// ============================================================================
+// Subscription API Methods
+// ============================================================================
+
+function buildSubscriptionQueryString(filters: SubscriptionFilters): string {
+  const params = new URLSearchParams();
+
+  if (filters.search) params.append('search', filters.search);
+  if (filters.status) params.append('status', filters.status);
+  if (filters.category_id !== undefined) params.append('category_id', filters.category_id.toString());
+  if (filters.subcategory_id !== undefined) params.append('subcategory_id', filters.subcategory_id.toString());
+  if (filters.value_level) params.append('value_level', filters.value_level);
+  if (filters.ccm_owner) params.append('ccm_owner', filters.ccm_owner);
+  if (filters.sort_by) params.append('sort_by', filters.sort_by);
+  if (filters.sort_order) params.append('sort_order', filters.sort_order);
+  if (filters.include_deleted) params.append('include_deleted', 'true');
+
+  const queryString = params.toString();
+  return queryString ? `?${queryString}` : '';
+}
+
+export async function listSubscriptions(
+  filters: SubscriptionFilters = {}
+): Promise<SubscriptionListItem[]> {
+  const query = buildSubscriptionQueryString(filters);
+  return fetchApi<SubscriptionListItem[]>(`/subscriptions${query}`);
+}
+
+export async function getSubscription(subscriptionId: string): Promise<Subscription> {
+  return fetchApi<Subscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`);
+}
+
+export async function createSubscription(data: SubscriptionCreate): Promise<Subscription> {
+  return fetchApi<Subscription>('/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSubscription(
+  subscriptionId: string,
+  data: SubscriptionUpdate
+): Promise<Subscription> {
+  return fetchApi<Subscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSubscription(subscriptionId: string): Promise<void> {
+  return fetchApi<void>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function restoreSubscription(subscriptionId: string): Promise<Subscription> {
+  return fetchApi<Subscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}/restore`, {
+    method: 'POST',
+  });
+}
+
+export async function listSubscriptionOwners(): Promise<string[]> {
+  return fetchApi<string[]>('/subscriptions/owners');
+}
+
+export async function exportSubscriptions(includeDeleted = false): Promise<void> {
+  const query = includeDeleted ? '?include_deleted=true' : '';
+  const url = `${API_BASE_URL}/subscriptions/export${query}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error('Export failed');
+  }
+
+  // Trigger download
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+
+  // Extract filename from Content-Disposition header or use default
+  const contentDisposition = response.headers.get('Content-Disposition');
+  const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+  link.download = filenameMatch ? filenameMatch[1] : 'subscriptions_export.csv';
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function importSubscriptions(file: File): Promise<SubscriptionImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE_URL}/subscriptions/import`, {
     method: 'POST',
     body: formData,
   });

@@ -11,7 +11,7 @@ from alembic import context
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import DATABASE_URL, Base
-from app.models import Equipment, AssignmentHistory  # noqa: F401
+from app.models import Equipment, AssignmentHistory, Category, Subcategory, Subscription  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
