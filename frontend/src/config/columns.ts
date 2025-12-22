@@ -8,10 +8,11 @@ export interface ColumnDefinition {
   width?: string;
 }
 
-// Always visible columns (Equipment ID, Subcategory, User, Name)
+// Always visible columns (Equipment ID, Subcategory, Ownership, User, Name)
 export const ALWAYS_VISIBLE_COLUMNS: ColumnDefinition[] = [
   { key: 'equipment_id', label: 'Equipment ID', sortable: true },
   { key: 'computer_subtype', label: 'Subcategory', sortable: true },
+  { key: 'ownership', label: 'Ownership', sortable: true },
   { key: 'primary_user', label: 'User', sortable: true },
   { key: 'equipment_name', label: 'Name', sortable: true },
 ];
@@ -30,7 +31,6 @@ export const VIEW_GROUP_COLUMNS: Record<ViewGroupKey, ColumnDefinition[]> = {
     { key: 'manufacturer', label: 'Manufacturer', sortable: true },
     { key: 'model', label: 'Model', sortable: true },
     { key: 'purpose', label: 'Purpose', sortable: true },
-    { key: 'ownership', label: 'Ownership', sortable: true },
     { key: 'ip_address', label: 'IP Address', sortable: false },
     { key: 'overall_rating', label: 'Overall Rating', sortable: true },
   ],
