@@ -1,0 +1,982 @@
+openapi: 3.0.3
+info:
+  title: Subscription Tracking API
+  description: API endpoints for managing subscription inventory with configurable categories
+  version: 1.1.0  # Updated 2025-12-22 for field definition changes
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+paths:
+  # ============================================
+  # CATEGORY ENDPOINTS
+  # ============================================
+  /categories:
+    get:
+      summary: List all categories with subcategories
+      description: Returns all categories with their nested subcategories. Used to populate dropdowns.
+      operationId: listCategories
+      parameters:
+        - name: include_inactive
+          in: query
+          description: Include inactive (soft-deleted) categories
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of categories with subcategories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryWithSubcategories'
+
+    post:
+      summary: Create a new category
+      description: Creates a new subscription category
+      operationId: createCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreate'
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          description: Category name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /categories/{category_id}:
+    parameters:
+      - name: category_id
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    get:
+      summary: Get category by ID
+      operationId: getCategory
+      responses:
+        '200':
+          description: Category details with subcategories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryWithSubcategories'
+        '404':
+          description: Category not found
+
+    put:
+      summary: Update category
+      operationId: updateCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdate'
+      responses:
+        '200':
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '404':
+          description: Category not found
+
+    delete:
+      summary: Delete category (soft delete)
+      description: Soft deletes category. Fails if subscriptions use this category.
+      operationId: deleteCategory
+      responses:
+        '204':
+          description: Category deleted
+        '400':
+          description: Cannot delete - category in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+
+  /categories/{category_id}/usage:
+    parameters:
+      - name: category_id
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    get:
+      summary: Get category usage count
+      description: Returns count of subscriptions using this category
+      operationId: getCategoryUsage
+      responses:
+        '200':
+          description: Usage count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription_count:
+                    type: integer
+
+  # ============================================
+  # SUBCATEGORY ENDPOINTS
+  # ============================================
+  /categories/{category_id}/subcategories:
+    parameters:
+      - name: category_id
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    get:
+      summary: List subcategories for a category
+      operationId: listSubcategories
+      parameters:
+        - name: include_inactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of subcategories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcategoryResponse'
+
+    post:
+      summary: Create subcategory
+      operationId: createSubcategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcategoryCreate'
+      responses:
+        '201':
+          description: Subcategory created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcategoryResponse'
+        '400':
+          description: Subcategory name already exists in this category
+
+  /subcategories/{subcategory_id}:
+    parameters:
+      - name: subcategory_id
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    put:
+      summary: Update subcategory
+      operationId: updateSubcategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcategoryUpdate'
+      responses:
+        '200':
+          description: Subcategory updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcategoryResponse'
+
+    delete:
+      summary: Delete subcategory (soft delete)
+      description: Soft deletes subcategory. Fails if subscriptions use it.
+      operationId: deleteSubcategory
+      responses:
+        '204':
+          description: Subcategory deleted
+        '400':
+          description: Cannot delete - subcategory in use
+
+  /subcategories/{subcategory_id}/usage:
+    parameters:
+      - name: subcategory_id
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    get:
+      summary: Get subcategory usage count
+      operationId: getSubcategoryUsage
+      responses:
+        '200':
+          description: Usage count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription_count:
+                    type: integer
+
+  # ============================================
+  # SUBSCRIPTION ENDPOINTS
+  # ============================================
+  /subscriptions:
+    get:
+      summary: List all subscriptions
+      description: Returns a list of all non-deleted subscriptions with optional filtering
+      operationId: listSubscriptions
+      parameters:
+        - name: search
+          in: query
+          description: Search term to filter across all fields
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+            enum: [Active, Inactive]
+        - name: category_id
+          in: query
+          description: Filter by category ID
+          schema:
+            type: integer
+        - name: subcategory_id
+          in: query
+          description: Filter by subcategory ID
+          schema:
+            type: integer
+        - name: value_level
+          in: query
+          description: Filter by value level
+          schema:
+            type: string
+            enum: [H, M, L]
+        - name: ccm_owner
+          in: query
+          description: Filter by CCM owner
+          schema:
+            type: string
+        - name: include_deleted
+          in: query
+          description: Include soft-deleted subscriptions (for admin)
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionListItem'
+
+    post:
+      summary: Create a new subscription
+      description: Creates a new subscription with auto-generated ID
+      operationId: createSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreate'
+      responses:
+        '201':
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /subscriptions/{subscription_id}:
+    parameters:
+      - name: subscription_id
+        in: path
+        required: true
+        description: Subscription ID (e.g., SUB-0001)
+        schema:
+          type: string
+
+    get:
+      summary: Get subscription by ID
+      description: Returns full subscription details including deobfuscated password
+      operationId: getSubscription
+      responses:
+        '200':
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update subscription
+      description: Updates an existing subscription
+      operationId: updateSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionUpdate'
+      responses:
+        '200':
+          description: Subscription updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Soft delete subscription
+      description: Marks subscription as deleted (recoverable via admin)
+      operationId: deleteSubscription
+      responses:
+        '204':
+          description: Subscription deleted successfully
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /subscriptions/{subscription_id}/restore:
+    parameters:
+      - name: subscription_id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    post:
+      summary: Restore deleted subscription
+      description: Restores a soft-deleted subscription
+      operationId: restoreSubscription
+      responses:
+        '200':
+          description: Subscription restored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Subscription is not deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /subscriptions/import:
+    post:
+      summary: Import subscriptions from CSV
+      description: Bulk import subscriptions from CSV file
+      operationId: importSubscriptions
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file to import
+      responses:
+        '200':
+          description: Import completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          description: Invalid CSV file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /subscriptions/export:
+    get:
+      summary: Export subscriptions to CSV
+      description: Export all subscriptions (including passwords - handle with care)
+      operationId: exportSubscriptions
+      parameters:
+        - name: include_deleted
+          in: query
+          description: Include soft-deleted subscriptions
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+components:
+  schemas:
+    # ============================================
+    # CATEGORY SCHEMAS
+    # ============================================
+    CategoryCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        display_order:
+          type: integer
+          default: 0
+
+    CategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+
+    CategoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CategoryWithSubcategories:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+        subcategories:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubcategoryResponse'
+
+    # ============================================
+    # SUBCATEGORY SCHEMAS
+    # ============================================
+    SubcategoryCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        display_order:
+          type: integer
+          default: 0
+
+    SubcategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+
+    SubcategoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        category_id:
+          type: integer
+        name:
+          type: string
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # ============================================
+    # SUBSCRIPTION SCHEMAS
+    # ============================================
+    SubscriptionCreate:
+      type: object
+      required:
+        - provider
+      properties:
+        provider:
+          type: string
+          maxLength: 200
+        category_id:
+          type: integer
+          nullable: true
+        subcategory_id:
+          type: integer
+          nullable: true
+        link:
+          type: string
+          format: uri
+          maxLength: 500
+        google_authentication:
+          type: string
+          format: email
+          maxLength: 200
+          description: Google authentication email (was 'authentication')
+        username:
+          type: string
+          maxLength: 200
+        password:
+          type: string
+          maxLength: 500
+          description: Will be obfuscated before storage
+        in_lastpass:
+          type: boolean
+        status:
+          type: string
+          enum: [Active, Inactive]
+          default: Active
+        description_value:
+          type: string
+        value_level:
+          type: string
+          enum: [H, M, L]
+        ccm_owner:
+          type: string
+          maxLength: 200
+        subscription_log:
+          type: string
+        payment_method:
+          type: string
+          maxLength: 200
+        payment_amount:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Payment amount (renamed from cost, was string, now numeric)
+        annual_cost:
+          type: number
+          format: decimal
+          minimum: 0
+        payment_frequency:
+          type: string
+          enum: [Monthly, Yearly, Ad Hoc]
+        renewal_frequency:
+          type: string
+          enum: [Monthly, Yearly, Ad Hoc]
+          description: New field for renewal frequency
+        renewal_date:
+          type: string
+          format: date
+        last_confirmed_alive:
+          type: string
+          format: date
+        main_vendor_contact:
+          type: string
+          maxLength: 500
+        subscriber_email:
+          type: string
+          format: email
+          maxLength: 200
+        forward_to:
+          type: string
+          format: email
+          maxLength: 200
+        email_routing:
+          type: string
+          maxLength: 100
+        email_volume_per_week:
+          type: number
+          format: decimal
+          description: Email volume per week (was string, now numeric)
+        actions_todos:
+          type: string
+        access_level_required:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+          description: New field for general notes
+
+    SubscriptionUpdate:
+      type: object
+      description: All fields optional for partial update
+      properties:
+        provider:
+          type: string
+          maxLength: 200
+        category_id:
+          type: integer
+          nullable: true
+        subcategory_id:
+          type: integer
+          nullable: true
+        link:
+          type: string
+          format: uri
+          maxLength: 500
+        google_authentication:
+          type: string
+          format: email
+          maxLength: 200
+        username:
+          type: string
+          maxLength: 200
+        password:
+          type: string
+          maxLength: 500
+        in_lastpass:
+          type: boolean
+        status:
+          type: string
+          enum: [Active, Inactive]
+        description_value:
+          type: string
+        value_level:
+          type: string
+          enum: [H, M, L]
+        ccm_owner:
+          type: string
+          maxLength: 200
+        subscription_log:
+          type: string
+        payment_method:
+          type: string
+          maxLength: 200
+        payment_amount:
+          type: number
+          format: decimal
+          minimum: 0
+        annual_cost:
+          type: number
+          format: decimal
+          minimum: 0
+        payment_frequency:
+          type: string
+          enum: [Monthly, Yearly, Ad Hoc]
+        renewal_frequency:
+          type: string
+          enum: [Monthly, Yearly, Ad Hoc]
+        renewal_date:
+          type: string
+          format: date
+        last_confirmed_alive:
+          type: string
+          format: date
+        main_vendor_contact:
+          type: string
+          maxLength: 500
+        subscriber_email:
+          type: string
+          format: email
+          maxLength: 200
+        forward_to:
+          type: string
+          format: email
+          maxLength: 200
+        email_routing:
+          type: string
+          maxLength: 100
+        email_volume_per_week:
+          type: number
+          format: decimal
+        actions_todos:
+          type: string
+        access_level_required:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+
+    SubscriptionListItem:
+      type: object
+      description: Summary view for list display
+      properties:
+        subscription_id:
+          type: string
+        provider:
+          type: string
+        category_id:
+          type: integer
+        category_name:
+          type: string
+        subcategory_id:
+          type: integer
+        subcategory_name:
+          type: string
+        status:
+          type: string
+          enum: [Active, Inactive]
+        ccm_owner:
+          type: string
+        is_deleted:
+          type: boolean
+        renewal_date:
+          type: string
+          format: date
+        renewal_status:
+          type: string
+          enum: [ok, warning, urgent, overdue]
+          description: Visual indicator for renewal urgency
+        # Access View fields
+        link:
+          type: string
+        google_authentication:
+          type: string
+          format: email
+        username:
+          type: string
+        password_masked:
+          type: string
+          description: Password shown as asterisks
+        in_lastpass:
+          type: boolean
+        access_level_required:
+          type: string
+        # Financial View fields
+        payment_method:
+          type: string
+        payment_amount:
+          type: number
+        annual_cost:
+          type: number
+        payment_frequency:
+          type: string
+          enum: [Monthly, Yearly, Ad Hoc]
+        renewal_frequency:
+          type: string
+          enum: [Monthly, Yearly, Ad Hoc]
+        # Communication View fields
+        subscriber_email:
+          type: string
+        forward_to:
+          type: string
+        email_routing:
+          type: string
+        email_volume_per_week:
+          type: number
+        main_vendor_contact:
+          type: string
+        # Details View fields
+        description_value:
+          type: string
+        value_level:
+          type: string
+        subscription_log:
+          type: string
+        actions_todos:
+          type: string
+        last_confirmed_alive:
+          type: string
+          format: date
+        notes:
+          type: string
+
+    SubscriptionResponse:
+      type: object
+      description: Full subscription details including deobfuscated password
+      properties:
+        id:
+          type: integer
+        subscription_id:
+          type: string
+        provider:
+          type: string
+        category_id:
+          type: integer
+        category_name:
+          type: string
+        subcategory_id:
+          type: integer
+        subcategory_name:
+          type: string
+        link:
+          type: string
+        google_authentication:
+          type: string
+          format: email
+        username:
+          type: string
+        password:
+          type: string
+          description: Deobfuscated password (plaintext)
+        in_lastpass:
+          type: boolean
+        status:
+          type: string
+          enum: [Active, Inactive]
+        description_value:
+          type: string
+        value_level:
+          type: string
+          enum: [H, M, L]
+        ccm_owner:
+          type: string
+        subscription_log:
+          type: string
+        payment_method:
+          type: string
+        payment_amount:
+          type: number
+          format: decimal
+        annual_cost:
+          type: number
+          format: decimal
+        payment_frequency:
+          type: string
+          enum: [Monthly, Yearly, Ad Hoc]
+        renewal_frequency:
+          type: string
+          enum: [Monthly, Yearly, Ad Hoc]
+        renewal_date:
+          type: string
+          format: date
+        last_confirmed_alive:
+          type: string
+          format: date
+        main_vendor_contact:
+          type: string
+        subscriber_email:
+          type: string
+        forward_to:
+          type: string
+        email_routing:
+          type: string
+        email_volume_per_week:
+          type: number
+          format: decimal
+        actions_todos:
+          type: string
+        access_level_required:
+          type: string
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ImportResult:
+      type: object
+      properties:
+        total_rows:
+          type: integer
+        created:
+          type: integer
+        updated:
+          type: integer
+        restored:
+          type: integer
+        failed:
+          type: integer
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportError'
+
+    ImportError:
+      type: object
+      properties:
+        row:
+          type: integer
+        provider:
+          type: string
+        error:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
