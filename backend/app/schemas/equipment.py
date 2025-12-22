@@ -26,6 +26,7 @@ class EquipmentBase(BaseModel):
     location: Optional[str] = Field(None, max_length=200)
     cost: Optional[Decimal] = Field(None, ge=0)
     purpose: Optional[str] = Field(None, max_length=100)
+    ownership: Optional[str] = Field(None, max_length=100)
 
     # PC-specific fields (computer_subtype now String for extensibility)
     computer_subtype: Optional[str] = Field(None, max_length=50)
@@ -89,6 +90,7 @@ class EquipmentListItem(BaseModel):
     # Summary view fields
     manufacturer: Optional[str] = None
     location: Optional[str] = None
+    ownership: Optional[str] = None
     notes: Optional[str] = None
 
     # Machine Spec view fields

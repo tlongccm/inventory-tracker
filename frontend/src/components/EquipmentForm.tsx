@@ -50,6 +50,7 @@ export default function EquipmentForm({
     location: equipment?.location || '',
     cost: equipment?.cost?.toString() || '',
     purpose: equipment?.purpose || '',
+    ownership: equipment?.ownership || '',
     cpu_score: equipment?.cpu_score?.toString() || '',
     score_2d: equipment?.score_2d?.toString() || '',
     score_3d: equipment?.score_3d?.toString() || '',
@@ -155,6 +156,7 @@ export default function EquipmentForm({
         location: formData.location || undefined,
         cost: formData.cost ? parseFloat(formData.cost) : undefined,
         purpose: formData.purpose || undefined,
+        ownership: formData.ownership || undefined,
         cpu_score: formData.cpu_score ? parseInt(formData.cpu_score) : undefined,
         score_2d: formData.score_2d ? parseInt(formData.score_2d) : undefined,
         score_3d: formData.score_3d ? parseInt(formData.score_3d) : undefined,
@@ -231,6 +233,17 @@ export default function EquipmentForm({
                     <option key={status} value={status}>{status}</option>
                   ))}
                 </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="ownership">Ownership</label>
+                <input
+                  type="text"
+                  id="ownership"
+                  name="ownership"
+                  value={formData.ownership}
+                  onChange={handleChange}
+                  placeholder="e.g., Company, Leased, Personal"
+                />
               </div>
             </div>
           </div>

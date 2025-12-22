@@ -72,12 +72,20 @@ export default function EquipmentDetail({
               <span>{equipment.equipment_type}</span>
             </div>
             <div className="detail-item">
-              <label>Serial Number</label>
-              <span>{equipment.serial_number}</span>
-            </div>
-            <div className="detail-item">
               <label>Status</label>
               <span>{equipment.status}</span>
+            </div>
+            <div className="detail-item">
+              <label>Location</label>
+              <span>{equipment.location || '-'}</span>
+            </div>
+            <div className="detail-item">
+              <label>Purpose</label>
+              <span>{equipment.purpose || '-'}</span>
+            </div>
+            <div className="detail-item">
+              <label>Ownership</label>
+              <span>{equipment.ownership || '-'}</span>
             </div>
           </div>
         </div>
@@ -87,12 +95,20 @@ export default function EquipmentDetail({
           <h3>Specifications</h3>
           <div className="detail-grid">
             <div className="detail-item">
+              <label>Serial Number</label>
+              <span>{equipment.serial_number}</span>
+            </div>
+            <div className="detail-item">
               <label>Model</label>
               <span>{equipment.model || '-'}</span>
             </div>
             <div className="detail-item">
               <label>Manufacturer</label>
               <span>{equipment.manufacturer || '-'}</span>
+            </div>
+            <div className="detail-item">
+              <label>Manufacturing Date</label>
+              <span>{formatDate(equipment.manufacturing_date)}</span>
             </div>
             {equipment.equipment_type === 'PC' && (
               <>
@@ -138,26 +154,6 @@ export default function EquipmentDetail({
                 </div>
               </>
             )}
-            <div className="detail-item">
-              <label>Manufacturing Date</label>
-              <span>{formatDate(equipment.manufacturing_date)}</span>
-            </div>
-            <div className="detail-item">
-              <label>Acquisition Date</label>
-              <span>{formatDate(equipment.acquisition_date)}</span>
-            </div>
-            <div className="detail-item">
-              <label>Location</label>
-              <span>{equipment.location || '-'}</span>
-            </div>
-            <div className="detail-item">
-              <label>Purpose</label>
-              <span>{equipment.purpose || '-'}</span>
-            </div>
-            <div className="detail-item">
-              <label>Cost</label>
-              <span>{formatCost(equipment.cost)}</span>
-            </div>
           </div>
         </div>
 
@@ -221,13 +217,26 @@ export default function EquipmentDetail({
           </div>
         </div>
 
-        {/* Notes */}
-        {equipment.notes && (
-          <div className="detail-section">
-            <h3>Notes</h3>
-            <MarkdownRenderer content={equipment.notes} />
+        {/* History */}
+        <div className="detail-section">
+          <h3>History</h3>
+          <div className="detail-grid">
+            <div className="detail-item">
+              <label>Acquisition Date</label>
+              <span>{formatDate(equipment.acquisition_date)}</span>
+            </div>
+            <div className="detail-item">
+              <label>Cost</label>
+              <span>{formatCost(equipment.cost)}</span>
+            </div>
           </div>
-        )}
+          {equipment.notes && (
+            <div className="detail-item" style={{ marginTop: '1rem' }}>
+              <label>Notes</label>
+              <MarkdownRenderer content={equipment.notes} />
+            </div>
+          )}
+        </div>
 
         {/* Metadata */}
         <div className="detail-section">

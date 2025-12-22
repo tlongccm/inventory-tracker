@@ -29,6 +29,7 @@ export interface EquipmentListItem {
   // Summary view fields
   manufacturer: string | null;
   location: string | null;
+  ownership: string | null;
   notes: string | null;
 
   // Machine Spec view fields
@@ -72,6 +73,7 @@ export interface Equipment {
   location: string | null;
   cost: number | null;
   purpose: string | null;
+  ownership: string | null;
 
   // PC-specific fields
   computer_subtype: ComputerSubtype | null;
@@ -126,6 +128,7 @@ export interface EquipmentCreate {
   location?: string;
   cost?: number;
   purpose?: string;
+  ownership?: string;
   cpu_score?: number;
   score_2d?: number;
   score_3d?: number;
@@ -162,6 +165,7 @@ export interface EquipmentUpdate {
   location?: string;
   cost?: number;
   purpose?: string;
+  ownership?: string;
   cpu_score?: number;
   score_2d?: number;
   score_3d?: number;
@@ -219,7 +223,7 @@ export interface EquipmentFilters {
   model?: string;
   min_rating?: number;
   max_rating?: number;
-  sort_by?: 'equipment_id' | 'equipment_name' | 'model' | 'primary_user' | 'status' | 'overall_rating' | 'created_at' | 'computer_subtype' | 'manufacturer' | 'location' | 'cpu_model' | 'ram' | 'storage' | 'operating_system' | 'serial_number' | 'cpu_score' | 'score_2d' | 'score_3d' | 'memory_score' | 'disk_score' | 'assignment_date' | 'usage_type';
+  sort_by?: 'equipment_id' | 'equipment_name' | 'model' | 'primary_user' | 'status' | 'overall_rating' | 'created_at' | 'computer_subtype' | 'manufacturer' | 'location' | 'ownership' | 'cpu_model' | 'ram' | 'storage' | 'operating_system' | 'serial_number' | 'cpu_score' | 'score_2d' | 'score_3d' | 'memory_score' | 'disk_score' | 'assignment_date' | 'usage_type';
   sort_order?: 'asc' | 'desc';
   include_deleted?: boolean;
 }

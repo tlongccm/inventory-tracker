@@ -80,6 +80,7 @@ class Equipment(Base):
     location = Column(String(200))
     cost = Column(Numeric(10, 2))
     purpose = Column(String(100))  # Equipment function (e.g., "CEO", "Trading", "Research")
+    ownership = Column(String(100))  # Equipment ownership (e.g., "Company", "Leased", "Personal")
 
     # PC-specific fields (nullable for non-PC types)
     computer_subtype = Column(String(50))  # Now String for extensibility (Desktop, Laptop, Tower, SFF)
