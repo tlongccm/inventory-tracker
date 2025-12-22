@@ -8,10 +8,10 @@ export interface ColumnDefinition {
   width?: string;
 }
 
-// Always visible columns (Equipment ID, Sub Type, User, Name)
+// Always visible columns (Equipment ID, Subcategory, User, Name)
 export const ALWAYS_VISIBLE_COLUMNS: ColumnDefinition[] = [
   { key: 'equipment_id', label: 'Equipment ID', sortable: true },
-  { key: 'computer_subtype', label: 'Sub Type', sortable: true },
+  { key: 'computer_subtype', label: 'Subcategory', sortable: true },
   { key: 'primary_user', label: 'User', sortable: true },
   { key: 'equipment_name', label: 'Name', sortable: true },
 ];
@@ -26,33 +26,42 @@ export const STATUS_COLUMN: ColumnDefinition = {
 // View group column definitions
 export const VIEW_GROUP_COLUMNS: Record<ViewGroupKey, ColumnDefinition[]> = {
   summary: [
-    { key: 'manufacturer', label: 'Make', sortable: true },
+    { key: 'equipment_type', label: 'Category', sortable: true },
+    { key: 'manufacturer', label: 'Manufacturer', sortable: true },
     { key: 'model', label: 'Model', sortable: true },
-    { key: 'location', label: 'Location', sortable: true },
-    { key: 'notes', label: 'Notes', sortable: false },
+    { key: 'purpose', label: 'Purpose', sortable: true },
+    { key: 'ip_address', label: 'IP Address', sortable: false },
+    { key: 'overall_rating', label: 'Overall Rating', sortable: true },
   ],
-  machineSpec: [
+  spec: [
     { key: 'cpu_model', label: 'CPU Model', sortable: true },
+    { key: 'cpu_speed', label: 'CPU Base Speed', sortable: true },
+    { key: 'operating_system', label: 'Operating System', sortable: true },
     { key: 'ram', label: 'RAM', sortable: true },
     { key: 'storage', label: 'Storage', sortable: true },
-    { key: 'operating_system', label: 'OS', sortable: true },
-    { key: 'serial_number', label: 'Serial #', sortable: true },
-    { key: 'mac_address', label: 'MAC', sortable: false },
+    { key: 'video_card', label: 'Video Card', sortable: true },
+    { key: 'display_resolution', label: 'Display Resolution', sortable: true },
+    { key: 'mac_lan', label: 'MAC (LAN)', sortable: false },
+    { key: 'mac_wlan', label: 'MAC (WLAN)', sortable: false },
   ],
-  machinePerformance: [
+  performance: [
     { key: 'cpu_score', label: 'CPU Score', sortable: true },
     { key: 'score_2d', label: '2D Score', sortable: true },
     { key: 'score_3d', label: '3D Score', sortable: true },
-    { key: 'memory_score', label: 'RAM Score', sortable: true },
+    { key: 'memory_score', label: 'Memory Score', sortable: true },
     { key: 'disk_score', label: 'Disk Score', sortable: true },
-    { key: 'overall_rating', label: 'Overall', sortable: true },
+    { key: 'overall_rating', label: 'Overall Rating', sortable: true },
   ],
-  assignment: [
-    { key: 'assignment_date', label: 'Assigned', sortable: true },
-    { key: 'usage_type', label: 'Usage', sortable: true },
-    { key: 'ip_address', label: 'IP Address', sortable: false },
+  history: [
+    { key: 'manufacturing_date', label: 'Manufacturing Date', sortable: true },
+    { key: 'acquisition_date', label: 'Acquisition Date', sortable: true },
+    { key: 'assignment_date', label: 'Assignment Date', sortable: true },
+    { key: 'cost', label: 'Cost', sortable: true },
+    { key: 'notes', label: 'Notes', sortable: false },
   ],
+  // Full is a meta-toggle, it has no unique columns (it enables all other views)
+  full: [],
 };
 
-// All view group keys for iteration
-export const VIEW_GROUP_KEYS: ViewGroupKey[] = ['summary', 'machineSpec', 'machinePerformance', 'assignment'];
+// All view group keys for iteration (full is last as it's a meta-toggle)
+export const VIEW_GROUP_KEYS: ViewGroupKey[] = ['summary', 'spec', 'performance', 'history', 'full'];

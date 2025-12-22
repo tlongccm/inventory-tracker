@@ -3,6 +3,7 @@
  */
 
 import type { Equipment } from '../types/equipment';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface EquipmentDetailProps {
   equipment: Equipment | null;
@@ -128,8 +129,12 @@ export default function EquipmentDetail({
                   <span>{equipment.display_resolution || '-'}</span>
                 </div>
                 <div className="detail-item">
-                  <label>MAC Address</label>
-                  <span>{equipment.mac_address || '-'}</span>
+                  <label>MAC (LAN)</label>
+                  <span>{equipment.mac_lan || '-'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>MAC (WLAN)</label>
+                  <span>{equipment.mac_wlan || '-'}</span>
                 </div>
               </>
             )}
@@ -144,6 +149,10 @@ export default function EquipmentDetail({
             <div className="detail-item">
               <label>Location</label>
               <span>{equipment.location || '-'}</span>
+            </div>
+            <div className="detail-item">
+              <label>Purpose</label>
+              <span>{equipment.purpose || '-'}</span>
             </div>
             <div className="detail-item">
               <label>Cost</label>
@@ -216,7 +225,7 @@ export default function EquipmentDetail({
         {equipment.notes && (
           <div className="detail-section">
             <h3>Notes</h3>
-            <p>{equipment.notes}</p>
+            <MarkdownRenderer content={equipment.notes} />
           </div>
         )}
 

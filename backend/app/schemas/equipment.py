@@ -2,10 +2,18 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
+from enum import Enum as PyEnum
 from pydantic import BaseModel, Field, ConfigDict
 
-from ..models import EquipmentType, ComputerSubtype, Status, UsageType
+from ..models import EquipmentType
+
+
+class PreviewStatus(str, PyEnum):
+    """Status of a row in import preview."""
+    VALIDATED = "validated"
+    PROBLEMATIC = "problematic"
+    DUPLICATE = "duplicate"
 
 
 # Base schema with common fields
@@ -17,9 +25,10 @@ class EquipmentBase(BaseModel):
     acquisition_date: Optional[date] = None
     location: Optional[str] = Field(None, max_length=200)
     cost: Optional[Decimal] = Field(None, ge=0)
+    purpose: Optional[str] = Field(None, max_length=100)
 
-    # PC-specific fields
-    computer_subtype: Optional[ComputerSubtype] = None
+    # PC-specific fields (computer_subtype now String for extensibility)
+    computer_subtype: Optional[str] = Field(None, max_length=50)
     cpu_model: Optional[str] = Field(None, max_length=100)
     cpu_speed: Optional[str] = Field(None, max_length=50)
     operating_system: Optional[str] = Field(None, max_length=100)
@@ -27,7 +36,8 @@ class EquipmentBase(BaseModel):
     storage: Optional[str] = Field(None, max_length=100)
     video_card: Optional[str] = Field(None, max_length=200)
     display_resolution: Optional[str] = Field(None, max_length=50)
-    mac_address: Optional[str] = Field(None, max_length=17)
+    mac_lan: Optional[str] = Field(None, max_length=17)
+    mac_wlan: Optional[str] = Field(None, max_length=17)
 
     # Performance fields
     cpu_score: Optional[int] = Field(None, ge=0)
@@ -37,13 +47,13 @@ class EquipmentBase(BaseModel):
     disk_score: Optional[int] = Field(None, ge=0)
     overall_rating: Optional[int] = Field(None, ge=0)
 
-    # Assignment fields
+    # Assignment fields (usage_type and status now String for extensibility)
     equipment_name: Optional[str] = Field(None, max_length=100)
     ip_address: Optional[str] = Field(None, max_length=45)
     assignment_date: Optional[date] = None
     primary_user: Optional[str] = Field(None, max_length=200)
-    usage_type: Optional[UsageType] = None
-    status: Optional[Status] = Status.ACTIVE
+    usage_type: Optional[str] = Field(None, max_length=50)
+    status: Optional[str] = Field("Active", max_length=50)
 
     # Notes
     notes: Optional[str] = None
@@ -57,7 +67,8 @@ class EquipmentCreate(EquipmentBase):
 
 class EquipmentUpdate(EquipmentBase):
     """Schema for updating equipment (all fields optional)."""
-    pass
+    equipment_type: Optional[EquipmentType] = None
+    serial_number: Optional[str] = Field(None, max_length=100)
 
 
 class EquipmentListItem(BaseModel):
@@ -68,11 +79,12 @@ class EquipmentListItem(BaseModel):
     equipment_name: Optional[str] = None
     model: Optional[str] = None
     primary_user: Optional[str] = None
-    status: Status
+    status: Optional[str] = None
     is_deleted: bool
 
     # Always visible fields
-    computer_subtype: Optional[ComputerSubtype] = None
+    computer_subtype: Optional[str] = None
+    purpose: Optional[str] = None
 
     # Summary view fields
     manufacturer: Optional[str] = None
@@ -84,7 +96,8 @@ class EquipmentListItem(BaseModel):
     ram: Optional[str] = None
     storage: Optional[str] = None
     operating_system: Optional[str] = None
-    mac_address: Optional[str] = None
+    mac_lan: Optional[str] = None
+    mac_wlan: Optional[str] = None
 
     # Machine Performance view fields
     cpu_score: Optional[int] = None
@@ -96,7 +109,7 @@ class EquipmentListItem(BaseModel):
 
     # Assignment view fields
     assignment_date: Optional[date] = None
-    usage_type: Optional[UsageType] = None
+    usage_type: Optional[str] = None
     ip_address: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -120,7 +133,7 @@ class AssignmentHistoryItem(BaseModel):
     """A single assignment history record."""
     id: int
     previous_user: Optional[str] = None
-    previous_usage_type: Optional[UsageType] = None
+    previous_usage_type: Optional[str] = None
     previous_equipment_name: Optional[str] = None
     start_date: Optional[date] = None
     end_date: date
@@ -149,3 +162,63 @@ class ImportResult(BaseModel):
 class ErrorResponse(BaseModel):
     """API error response."""
     detail: str
+
+
+# Import Preview Types
+class FieldError(BaseModel):
+    """Validation error for a specific field."""
+    field: str
+    value: str
+    message: str
+    suggestion: Optional[str] = None
+
+
+class ImportPreviewRow(BaseModel):
+    """A single row in the import preview."""
+    row_number: int
+    equipment_id: str
+    data: Dict[str, Any]
+    status: PreviewStatus
+    errors: List[FieldError]
+    normalized_values: Optional[Dict[str, str]] = None
+    original_values: Optional[Dict[str, str]] = None
+
+
+class ImportPreviewResult(BaseModel):
+    """Result of CSV import preview."""
+    total_rows: int
+    validated_rows: List[ImportPreviewRow]
+    problematic_rows: List[ImportPreviewRow]
+    duplicate_rows: List[ImportPreviewRow]
+    csv_columns: List[str]
+
+
+class ImportRowData(BaseModel):
+    """Data for a single row to import."""
+    row_number: int
+    data: Dict[str, Any]
+
+
+class ImportConfirmRequest(BaseModel):
+    """Request to confirm import of selected rows."""
+    rows: List[ImportRowData]
+
+
+class ValidateRowRequest(BaseModel):
+    """Request to validate a single edited row."""
+    row_number: Optional[int] = None
+    data: Dict[str, Any]
+
+
+class ValidateFieldRequest(BaseModel):
+    """Request to validate a single field value."""
+    field: str
+    value: str
+
+
+class ValidateFieldResponse(BaseModel):
+    """Response from field validation."""
+    valid: bool
+    normalized_value: Optional[str] = None
+    error: Optional[str] = None
+    suggestion: Optional[str] = None

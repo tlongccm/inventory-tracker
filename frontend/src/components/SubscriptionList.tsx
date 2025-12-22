@@ -103,39 +103,52 @@ export default function SubscriptionList({
     const isActive = sortBy === field;
     const indicator = isActive
       ? sortOrder === 'asc'
-        ? ' ▲'
-        : ' ▼'
+        ? '▲'
+        : '▼'
       : sortable
-        ? ' ⇅'
-        : '';
+        ? '⇅'
+        : null;
 
     return (
       <th
         key={field}
         onClick={() => sortable && onSort?.(field)}
         className={sortable ? 'sortable' : ''}
-        style={{ width: `${width}px`, cursor: sortable ? 'pointer' : 'default' }}
+        data-column={field}
+        style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
       >
-        {label}
-        {indicator && (
-          <span className={`sort-indicator ${isActive ? 'active' : ''}`}>
-            {indicator}
-          </span>
-        )}
+        <div className="th-content">
+          {label}
+          {indicator && (
+            <span className={`sort-indicator ${isActive ? 'active' : ''}`}>
+              {indicator}
+            </span>
+          )}
+        </div>
       </th>
     );
   };
 
+  // Calculate total table width from column widths
+  const totalTableWidth = ALWAYS_VISIBLE_COLUMNS.reduce(
+    (sum, col) => sum + col.width,
+    100 + 110 // Add Renewal (100px) + Annual Cost (110px)
+  );
+
   return (
-    <div className="table-container">
-      <table className="subscription-table">
+    <div className="table-wrapper">
+      <table className="resizable-table" style={{ width: `${totalTableWidth}px`, maxWidth: `${totalTableWidth}px` }}>
         <thead>
           <tr>
             {ALWAYS_VISIBLE_COLUMNS.map((col) =>
               renderHeader(col.key, col.label, col.sortable, col.width)
             )}
-            <th style={{ width: '100px' }}>Renewal</th>
-            <th style={{ width: '110px' }}>Annual Cost</th>
+            <th data-column="renewal_date" style={{ width: '100px', minWidth: '100px', maxWidth: '100px' }}>
+              <div className="th-content">Renewal</div>
+            </th>
+            <th data-column="annual_cost" style={{ width: '110px', minWidth: '110px', maxWidth: '110px' }}>
+              <div className="th-content">Annual Cost</div>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -146,17 +159,17 @@ export default function SubscriptionList({
               className={`${selectedId === sub.subscription_id ? 'selected' : ''} ${getRenewalStatusClass(sub.renewal_status)}`}
               style={{ cursor: 'pointer' }}
             >
-              <td>{sub.subscription_id}</td>
-              <td>{sub.provider}</td>
-              <td>{sub.category_name || '-'}</td>
-              <td>
+              <td data-column="subscription_id" style={{ width: '100px', minWidth: '100px', maxWidth: '100px' }}>{sub.subscription_id}</td>
+              <td data-column="provider" style={{ width: '200px', minWidth: '200px', maxWidth: '200px' }}>{sub.provider}</td>
+              <td data-column="category_name" style={{ width: '180px', minWidth: '180px', maxWidth: '180px' }}>{sub.category_name || '-'}</td>
+              <td data-column="status" style={{ width: '90px', minWidth: '90px', maxWidth: '90px' }}>
                 <span className={`status-badge ${getStatusClass(sub.status)}`}>
                   {sub.status}
                 </span>
               </td>
-              <td>{sub.ccm_owner || '-'}</td>
-              <td>{formatDate(sub.renewal_date)}</td>
-              <td>{formatCurrency(sub.annual_cost)}</td>
+              <td data-column="ccm_owner" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>{sub.ccm_owner || '-'}</td>
+              <td data-column="renewal_date" style={{ width: '100px', minWidth: '100px', maxWidth: '100px' }}>{formatDate(sub.renewal_date)}</td>
+              <td data-column="annual_cost" style={{ width: '110px', minWidth: '110px', maxWidth: '110px' }}>{formatCurrency(sub.annual_cost)}</td>
             </tr>
           ))}
         </tbody>

@@ -2,11 +2,14 @@
 
 export type EquipmentType = 'PC' | 'Monitor' | 'Scanner' | 'Printer';
 
-export type ComputerSubtype = 'Desktop' | 'Laptop';
+// ComputerSubtype, Status, UsageType are now extensible strings (not fixed enums)
+// These are default known values but users can add new ones
+export type ComputerSubtype = string;
+export type Status = string;
+export type UsageType = string;
 
-export type Status = 'Active' | 'Inactive' | 'Decommissioned' | 'In Repair' | 'In Storage';
-
-export type UsageType = 'Personal' | 'Work';
+// Preview status for import workflow
+export type PreviewStatus = 'validated' | 'problematic' | 'duplicate';
 
 // List item for inventory table - extended with all view group fields
 export interface EquipmentListItem {
@@ -16,11 +19,12 @@ export interface EquipmentListItem {
   equipment_name: string | null;
   model: string | null;
   primary_user: string | null;
-  status: Status;
+  status: Status | null;
   is_deleted: boolean;
 
   // Always visible fields
   computer_subtype: ComputerSubtype | null;
+  purpose: string | null;
 
   // Summary view fields
   manufacturer: string | null;
@@ -32,7 +36,8 @@ export interface EquipmentListItem {
   ram: string | null;
   storage: string | null;
   operating_system: string | null;
-  mac_address: string | null;
+  mac_lan: string | null;
+  mac_wlan: string | null;
 
   // Machine Performance view fields
   cpu_score: number | null;
@@ -66,6 +71,7 @@ export interface Equipment {
   acquisition_date: string | null;
   location: string | null;
   cost: number | null;
+  purpose: string | null;
 
   // PC-specific fields
   computer_subtype: ComputerSubtype | null;
@@ -76,7 +82,8 @@ export interface Equipment {
   storage: string | null;
   video_card: string | null;
   display_resolution: string | null;
-  mac_address: string | null;
+  mac_lan: string | null;
+  mac_wlan: string | null;
 
   // Performance fields
   cpu_score: number | null;
@@ -112,11 +119,13 @@ export interface EquipmentCreate {
   storage?: string;
   video_card?: string;
   display_resolution?: string;
-  mac_address?: string;
+  mac_lan?: string;
+  mac_wlan?: string;
   manufacturing_date?: string;
   acquisition_date?: string;
   location?: string;
   cost?: number;
+  purpose?: string;
   cpu_score?: number;
   score_2d?: number;
   score_3d?: number;
@@ -134,6 +143,8 @@ export interface EquipmentCreate {
 
 // Request body for updating equipment
 export interface EquipmentUpdate {
+  equipment_type?: EquipmentType;
+  serial_number?: string;
   model?: string;
   manufacturer?: string;
   computer_subtype?: ComputerSubtype;
@@ -144,11 +155,13 @@ export interface EquipmentUpdate {
   storage?: string;
   video_card?: string;
   display_resolution?: string;
-  mac_address?: string;
+  mac_lan?: string;
+  mac_wlan?: string;
   manufacturing_date?: string;
   acquisition_date?: string;
   location?: string;
   cost?: number;
+  purpose?: string;
   cpu_score?: number;
   score_2d?: number;
   score_3d?: number;
@@ -209,4 +222,57 @@ export interface EquipmentFilters {
   sort_by?: 'equipment_id' | 'equipment_name' | 'model' | 'primary_user' | 'status' | 'overall_rating' | 'created_at' | 'computer_subtype' | 'manufacturer' | 'location' | 'cpu_model' | 'ram' | 'storage' | 'operating_system' | 'serial_number' | 'cpu_score' | 'score_2d' | 'score_3d' | 'memory_score' | 'disk_score' | 'assignment_date' | 'usage_type';
   sort_order?: 'asc' | 'desc';
   include_deleted?: boolean;
+}
+
+// Import Preview Types
+
+export interface FieldError {
+  field: string;
+  value: string;
+  message: string;
+  suggestion?: string;
+}
+
+export interface ImportPreviewRow {
+  row_number: number;
+  equipment_id: string;
+  data: Record<string, unknown>;
+  status: PreviewStatus;
+  errors: FieldError[];
+  normalized_values?: Record<string, string>;
+  original_values?: Record<string, string>;
+}
+
+export interface ImportPreviewResult {
+  total_rows: number;
+  validated_rows: ImportPreviewRow[];
+  problematic_rows: ImportPreviewRow[];
+  duplicate_rows: ImportPreviewRow[];
+  csv_columns: string[];
+}
+
+export interface ImportRowData {
+  row_number: number;
+  data: Record<string, unknown>;
+}
+
+export interface ImportConfirmRequest {
+  rows: ImportRowData[];
+}
+
+export interface ValidateRowRequest {
+  row_number?: number;
+  data: Record<string, unknown>;
+}
+
+export interface ValidateFieldRequest {
+  field: string;
+  value: string;
+}
+
+export interface ValidateFieldResponse {
+  valid: boolean;
+  normalized_value?: string;
+  error?: string;
+  suggestion?: string;
 }

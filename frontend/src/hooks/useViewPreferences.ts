@@ -5,6 +5,9 @@ import { DEFAULT_VIEW_PREFERENCES } from '../types/viewGroups';
 
 const STORAGE_KEY = 'inventory-view-preferences';
 
+// Individual view groups (excluding 'full' meta-toggle)
+const INDIVIDUAL_VIEWS: (keyof ViewPreferences)[] = ['summary', 'spec', 'performance', 'history'];
+
 /**
  * Loads view preferences from localStorage.
  * Returns defaults if unavailable or invalid.
@@ -19,9 +22,10 @@ function loadPreferences(): ViewPreferences {
     // Validate structure - ensure all keys exist
     if (
       typeof parsed.summary !== 'boolean' ||
-      typeof parsed.machineSpec !== 'boolean' ||
-      typeof parsed.machinePerformance !== 'boolean' ||
-      typeof parsed.assignment !== 'boolean'
+      typeof parsed.spec !== 'boolean' ||
+      typeof parsed.performance !== 'boolean' ||
+      typeof parsed.history !== 'boolean' ||
+      typeof parsed.full !== 'boolean'
     ) {
       return DEFAULT_VIEW_PREFERENCES;
     }
@@ -45,16 +49,41 @@ function savePreferences(prefs: ViewPreferences): void {
 
 /**
  * Hook for managing view group preferences with localStorage persistence.
+ * Handles 'full' as a meta-toggle that enables/disables all views.
  */
 export function useViewPreferences() {
   const [preferences, setPreferences] = useState<ViewPreferences>(loadPreferences);
 
   const toggleGroup = useCallback((group: ViewGroupKey) => {
     setPreferences((prev) => {
-      const updated = {
-        ...prev,
-        [group]: !prev[group],
-      };
+      let updated: ViewPreferences;
+
+      if (group === 'full') {
+        // Toggle all views on or off
+        const newValue = !prev.full;
+        updated = {
+          summary: newValue,
+          spec: newValue,
+          performance: newValue,
+          history: newValue,
+          full: newValue,
+        };
+      } else {
+        // Toggle individual view
+        const newValue = !prev[group];
+        updated = {
+          ...prev,
+          [group]: newValue,
+        };
+
+        // Check if all individual views are now enabled -> enable full
+        // Or if any individual view is disabled -> disable full
+        const allEnabled = INDIVIDUAL_VIEWS.every(
+          (view) => view === group ? newValue : prev[view]
+        );
+        updated.full = allEnabled;
+      }
+
       savePreferences(updated);
       return updated;
     });

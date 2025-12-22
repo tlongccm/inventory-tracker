@@ -3,6 +3,7 @@
  */
 
 import type { Software } from '../types/software';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface SoftwareDetailProps {
   software: Software | null;
@@ -144,7 +145,7 @@ export default function SoftwareDetail({
         {software.comments && (
           <div className="detail-section">
             <h3>Comments</h3>
-            <p>{software.comments}</p>
+            <MarkdownRenderer content={software.comments} />
           </div>
         )}
 

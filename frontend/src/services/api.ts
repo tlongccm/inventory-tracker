@@ -12,6 +12,12 @@ import type {
   AssignmentHistoryItem,
   ImportResult,
   ApiError,
+  ImportPreviewResult,
+  ImportPreviewRow,
+  ImportConfirmRequest,
+  ValidateRowRequest,
+  ValidateFieldRequest,
+  ValidateFieldResponse,
 } from '../types/equipment';
 
 import type {
@@ -203,6 +209,48 @@ export async function importEquipment(file: File): Promise<ImportResult> {
   }
 
   return response.json();
+}
+
+// Import Preview API (two-phase import workflow)
+
+export async function previewImport(file: File): Promise<ImportPreviewResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE_URL}/computers/import/preview`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json().catch(() => ({
+      detail: `HTTP error ${response.status}`,
+    }));
+    throw new Error(error.detail);
+  }
+
+  return response.json();
+}
+
+export async function validateRow(request: ValidateRowRequest): Promise<ImportPreviewRow> {
+  return fetchApi<ImportPreviewRow>('/computers/validate/row', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export async function validateField(request: ValidateFieldRequest): Promise<ValidateFieldResponse> {
+  return fetchApi<ValidateFieldResponse>('/computers/validate/field', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export async function confirmImport(request: ImportConfirmRequest): Promise<ImportResult> {
+  return fetchApi<ImportResult>('/computers/import/confirm', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
 }
 
 // ============================================================================

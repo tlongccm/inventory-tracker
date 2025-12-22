@@ -28,14 +28,21 @@ EQUIPMENT_TYPE_PREFIXES = {
 }
 
 
+# Known values for extensible enumerations (stored as strings, these are defaults)
+COMPUTER_SUBTYPE_VALUES = ["Desktop", "Laptop", "Tower", "SFF"]
+STATUS_VALUES = ["Active", "Inactive", "Decommissioned", "In Repair", "In Storage"]
+USAGE_TYPE_VALUES = ["Personal", "Work"]
+
+
+# Legacy enum classes kept for backwards compatibility with existing code
 class ComputerSubtype(str, PyEnum):
-    """Subtype for PC equipment only."""
+    """Subtype for PC equipment only (legacy - now stored as String)."""
     DESKTOP = "Desktop"
     LAPTOP = "Laptop"
 
 
 class Status(str, PyEnum):
-    """Equipment status."""
+    """Equipment status (legacy - now stored as String)."""
     ACTIVE = "Active"
     INACTIVE = "Inactive"
     DECOMMISSIONED = "Decommissioned"
@@ -44,7 +51,7 @@ class Status(str, PyEnum):
 
 
 class UsageType(str, PyEnum):
-    """Usage type indicating personal or work use."""
+    """Usage type indicating personal or work use (legacy - now stored as String)."""
     PERSONAL = "Personal"
     WORK = "Work"
 
@@ -72,9 +79,10 @@ class Equipment(Base):
     acquisition_date = Column(Date)
     location = Column(String(200))
     cost = Column(Numeric(10, 2))
+    purpose = Column(String(100))  # Equipment function (e.g., "CEO", "Trading", "Research")
 
     # PC-specific fields (nullable for non-PC types)
-    computer_subtype = Column(SQLEnum(ComputerSubtype))  # Desktop/Laptop
+    computer_subtype = Column(String(50))  # Now String for extensibility (Desktop, Laptop, Tower, SFF)
     cpu_model = Column(String(100))
     cpu_speed = Column(String(50))
     operating_system = Column(String(100))
@@ -82,7 +90,8 @@ class Equipment(Base):
     storage = Column(String(100))
     video_card = Column(String(200))
     display_resolution = Column(String(50))
-    mac_address = Column(String(17))
+    mac_lan = Column(String(17))
+    mac_wlan = Column(String(17))
 
     # Performance fields (Passmark) - PC only
     cpu_score = Column(Integer)
@@ -97,8 +106,8 @@ class Equipment(Base):
     ip_address = Column(String(45))
     assignment_date = Column(Date)
     primary_user = Column(String(200))
-    usage_type = Column(SQLEnum(UsageType))
-    status = Column(SQLEnum(Status), default=Status.ACTIVE)
+    usage_type = Column(String(50))  # Now String for extensibility (Personal, Work)
+    status = Column(String(50), default="Active")  # Now String for extensibility
 
     # Notes
     notes = Column(Text)

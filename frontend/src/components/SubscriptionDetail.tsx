@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import type { Subscription } from '../types/subscription';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface SubscriptionDetailProps {
   subscription: Subscription;
@@ -155,19 +156,31 @@ export default function SubscriptionDetail({
             <div className="detail-row">
               <span className="detail-label">Description & Value</span>
               <span className="detail-value multiline">
-                {subscription.description_value || '-'}
+                {subscription.description_value ? (
+                  <MarkdownRenderer content={subscription.description_value} />
+                ) : (
+                  '-'
+                )}
               </span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Subscription Log</span>
               <span className="detail-value multiline">
-                {subscription.subscription_log || '-'}
+                {subscription.subscription_log ? (
+                  <MarkdownRenderer content={subscription.subscription_log} />
+                ) : (
+                  '-'
+                )}
               </span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Actions/To Do</span>
               <span className="detail-value multiline">
-                {subscription.actions_todos || '-'}
+                {subscription.actions_todos ? (
+                  <MarkdownRenderer content={subscription.actions_todos} />
+                ) : (
+                  '-'
+                )}
               </span>
             </div>
             <DetailRow label="Last Confirmed Alive" value={formatDate(subscription.last_confirmed_alive)} />

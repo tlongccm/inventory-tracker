@@ -12,6 +12,16 @@ from .equipment import (
     ImportResult as EquipmentImportResult,
     ImportResult,  # Backwards compatibility
     ErrorResponse,
+    # Import Preview types
+    PreviewStatus,
+    FieldError,
+    ImportPreviewRow,
+    ImportPreviewResult,
+    ImportRowData,
+    ImportConfirmRequest,
+    ValidateRowRequest,
+    ValidateFieldRequest,
+    ValidateFieldResponse,
 )
 
 from .category import (
@@ -47,6 +57,16 @@ __all__ = [
     "ImportError",  # Backwards compatibility
     "ImportResult",  # Backwards compatibility
     "ErrorResponse",
+    # Import Preview types
+    "PreviewStatus",
+    "FieldError",
+    "ImportPreviewRow",
+    "ImportPreviewResult",
+    "ImportRowData",
+    "ImportConfirmRequest",
+    "ValidateRowRequest",
+    "ValidateFieldRequest",
+    "ValidateFieldResponse",
     # Category schemas
     "CategoryCreate",
     "CategoryUpdate",

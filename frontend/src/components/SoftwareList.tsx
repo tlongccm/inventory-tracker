@@ -183,8 +183,9 @@ export default function SoftwareList({
   );
 
   return (
-    <table className="resizable-table" style={{ width: `${totalTableWidth}px`, maxWidth: `${totalTableWidth}px` }}>
-      <thead>
+    <div className="table-wrapper">
+      <table className="resizable-table" style={{ width: `${totalTableWidth}px`, maxWidth: `${totalTableWidth}px` }}>
+        <thead>
         <tr>
           {visibleColumns.map((col) => (
             <ResizableHeader
@@ -195,9 +196,9 @@ export default function SoftwareList({
               width={columnWidths[col.key] || col.width || 100}
             />
           ))}
-        </tr>
-      </thead>
-      <tbody>
+          </tr>
+        </thead>
+        <tbody>
         {software.map((item) => (
           <tr
             key={item.software_id}
@@ -229,7 +230,8 @@ export default function SoftwareList({
             })}
           </tr>
         ))}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   );
 }

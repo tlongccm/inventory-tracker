@@ -9,8 +9,6 @@ from ..models import (
     Equipment,
     AssignmentHistory,
     EquipmentType,
-    Status,
-    UsageType,
     EQUIPMENT_TYPE_PREFIXES,
 )
 from ..schemas import EquipmentCreate, EquipmentUpdate
@@ -42,9 +40,9 @@ class EquipmentService:
 
     def get_all(
         self,
-        status: Optional[Status] = None,
+        status: Optional[str] = None,
         equipment_type: Optional[EquipmentType] = None,
-        usage_type: Optional[UsageType] = None,
+        usage_type: Optional[str] = None,
         location: Optional[str] = None,
         primary_user: Optional[str] = None,
         model: Optional[str] = None,

@@ -6,6 +6,7 @@
 import { useRef, useCallback } from 'react';
 import type { EquipmentListItem } from '../types/equipment';
 import type { ColumnDefinition } from '../config/columns';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface EquipmentListProps {
   equipment: EquipmentListItem[];
@@ -189,22 +190,23 @@ export default function EquipmentList({
   );
 
   return (
-    <table className="resizable-table" style={{ width: `${totalTableWidth}px`, maxWidth: `${totalTableWidth}px` }}>
-      <thead>
-        <tr>
-          {visibleColumns.map((col) => (
-            <ResizableHeader
-              key={col.key}
-              field={col.key}
-              label={col.label}
-              sortable={col.sortable}
-              width={columnWidths[col.key] || 60}
-            />
-          ))}
-          {onReassign && <th style={{ width: '85px', minWidth: '85px', maxWidth: '85px' }}>Actions</th>}
-        </tr>
-      </thead>
-      <tbody>
+    <div className="table-wrapper">
+      <table className="resizable-table" style={{ width: `${totalTableWidth}px`, maxWidth: `${totalTableWidth}px` }}>
+        <thead>
+          <tr>
+            {visibleColumns.map((col) => (
+              <ResizableHeader
+                key={col.key}
+                field={col.key}
+                label={col.label}
+                sortable={col.sortable}
+                width={columnWidths[col.key] || 60}
+              />
+            ))}
+            {onReassign && <th style={{ width: '85px', minWidth: '85px', maxWidth: '85px' }}>Actions</th>}
+          </tr>
+        </thead>
+        <tbody>
         {equipment.map((item) => (
           <tr
             key={item.equipment_id}
@@ -222,9 +224,17 @@ export default function EquipmentList({
               if (col.key === 'status') {
                 return (
                   <td key={col.key} data-column={col.key} style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}>
-                    <span className={`status-badge ${getStatusClass(item.status)}`}>
-                      {item.status}
+                    <span className={`status-badge ${getStatusClass(item.status || 'Active')}`}>
+                      {item.status || 'Active'}
                     </span>
+                  </td>
+                );
+              }
+              // Special handling for notes column - render markdown
+              if (col.key === 'notes' && value) {
+                return (
+                  <td key={col.key} data-column={col.key} style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}>
+                    <MarkdownRenderer content={String(value)} />
                   </td>
                 );
               }
@@ -249,7 +259,8 @@ export default function EquipmentList({
             )}
           </tr>
         ))}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   );
 }

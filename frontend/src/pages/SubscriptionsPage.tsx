@@ -216,7 +216,7 @@ export default function SubscriptionsPage() {
       <div className="toolbar">
         <div className="toolbar-actions">
           <button className="primary" onClick={handleAdd}>
-            Add Subscription
+            Add
           </button>
           <button className="secondary" onClick={handleExport}>
             Export CSV

@@ -1,6 +1,6 @@
 // View group configuration types for configurable list views
 
-export type ViewGroupKey = 'summary' | 'machineSpec' | 'machinePerformance' | 'assignment';
+export type ViewGroupKey = 'summary' | 'spec' | 'performance' | 'history' | 'full';
 
 export interface ViewGroupDefinition {
   key: ViewGroupKey;
@@ -10,24 +10,27 @@ export interface ViewGroupDefinition {
 
 export interface ViewPreferences {
   summary: boolean;
-  machineSpec: boolean;
-  machinePerformance: boolean;
-  assignment: boolean;
+  spec: boolean;
+  performance: boolean;
+  history: boolean;
+  full: boolean;
 }
 
 export const DEFAULT_VIEW_PREFERENCES: ViewPreferences = {
   summary: false,
-  machineSpec: false,
-  machinePerformance: false,
-  assignment: false,
+  spec: false,
+  performance: false,
+  history: false,
+  full: false,
 };
 
 // View group labels for toggle buttons
 export const VIEW_GROUP_LABELS: Record<ViewGroupKey, string> = {
   summary: 'Summary',
-  machineSpec: 'Machine Specs',
-  machinePerformance: 'Performance',
-  assignment: 'Assignment',
+  spec: 'Spec',
+  performance: 'Performance',
+  history: 'History',
+  full: 'Full',
 };
 
 // Search state for universal search functionality

@@ -25,8 +25,8 @@
 
 **Purpose**: Install dependencies and prepare development environment
 
-- [ ] T001 Install frontend markdown dependencies: `npm install react-markdown dompurify @types/dompurify` in `frontend/`
-- [ ] T002 Verify backend dependencies are up to date in `backend/requirements.txt`
+- [X] T001 Install frontend markdown dependencies: `npm install react-markdown dompurify @types/dompurify` in `frontend/`
+- [X] T002 Verify backend dependencies are up to date in `backend/requirements.txt`
 
 ---
 
@@ -38,24 +38,24 @@
 
 ### Database Migration
 
-- [ ] T003 Create Alembic migration to add `purpose` field to Equipment table in `backend/alembic/versions/`
-- [ ] T004 Update migration to convert `computer_subtype`, `status`, `usage_type` from Enum to String(50) in `backend/alembic/versions/`
-- [ ] T005 Run and verify migration: `alembic upgrade head`
+- [X] T003 Create Alembic migration to add `purpose` field to Equipment table in `backend/alembic/versions/`
+- [X] T004 Update migration to convert `computer_subtype`, `status`, `usage_type` from Enum to String(50) in `backend/alembic/versions/`
+- [X] T005 Run and verify migration: `alembic upgrade head`
 
 ### Backend Validators & Normalizers
 
-- [ ] T006 [P] Create `backend/app/services/validators.py` with IPv4, MAC address, Equipment ID validators
-- [ ] T007 [P] Create `backend/app/utils/normalizers.py` with MAC normalization, CPU speed normalization, title case conversion
+- [X] T006 [P] Create `backend/app/services/validators.py` with IPv4, MAC address, Equipment ID validators
+- [X] T007 [P] Create `backend/app/utils/normalizers.py` with MAC normalization, CPU speed normalization, title case conversion
 
 ### Model & Schema Updates
 
-- [ ] T008 Update Equipment model in `backend/app/models/equipment.py`: add `purpose` field, change enum columns to String
-- [ ] T009 Update Equipment schemas in `backend/app/schemas/equipment.py`: add `purpose` field, update field types, add preview types (ImportPreviewRow, ImportPreviewResult, FieldError)
+- [X] T008 Update Equipment model in `backend/app/models/equipment.py`: add `purpose` field, change enum columns to String
+- [X] T009 Update Equipment schemas in `backend/app/schemas/equipment.py`: add `purpose` field, update field types, add preview types (ImportPreviewRow, ImportPreviewResult, FieldError)
 
 ### CSV Field Mappings
 
-- [ ] T010 Update CSV_FIELD_MAP in `backend/app/services/csv_service.py`: add column aliases (Category→Equipment Type, Subcategory→Computer Subtype, CPU Base Speed→CPU Speed, Ownership→Usage Type)
-- [ ] T011 Add value mappings in `backend/app/services/csv_service.py`: Subcategory (Tower/SFF/PC→Desktop), Status (Inactive - In Storage→In Storage), Ownership (CCM→Work)
+- [X] T010 Update CSV_FIELD_MAP in `backend/app/services/csv_service.py`: add column aliases (Category→Equipment Type, Subcategory→Computer Subtype, CPU Base Speed→CPU Speed, Ownership→Usage Type)
+- [X] T011 Add value mappings in `backend/app/services/csv_service.py`: Subcategory (Tower/SFF/PC→Desktop), Status (Inactive - In Storage→In Storage), Ownership (CCM→Work)
 
 **Checkpoint**: Foundation ready - validators, normalizers, model changes, and CSV mappings are in place
 
@@ -69,21 +69,21 @@
 
 ### Backend Implementation
 
-- [ ] T012 [US1] Implement preview parsing logic in `backend/app/services/csv_service.py`: parse_csv_preview() that returns ImportPreviewResult
-- [ ] T013 [US1] Add Equipment ID handling in `backend/app/services/csv_service.py`: auto-generate if missing, uppercase conversion, uniqueness check
-- [ ] T014 [US1] Add field validation in preview in `backend/app/services/csv_service.py`: validate IPv4, MAC, apply normalizations
-- [ ] T015 [US1] Implement duplicate detection in `backend/app/services/csv_service.py`: check Equipment ID exists in database
-- [ ] T016 [US1] Create preview endpoint `POST /api/v1/computers/import/preview` in `backend/app/api/computers.py`
-- [ ] T017 [US1] Create validate row endpoint `POST /api/v1/computers/validate/row` in `backend/app/api/computers.py`
-- [ ] T018 [US1] Create confirm import endpoint `POST /api/v1/computers/import/confirm` in `backend/app/api/computers.py`
+- [X] T012 [US1] Implement preview parsing logic in `backend/app/services/csv_service.py`: parse_csv_preview() that returns ImportPreviewResult
+- [X] T013 [US1] Add Equipment ID handling in `backend/app/services/csv_service.py`: auto-generate if missing, uppercase conversion, uniqueness check
+- [X] T014 [US1] Add field validation in preview in `backend/app/services/csv_service.py`: validate IPv4, MAC, apply normalizations
+- [X] T015 [US1] Implement duplicate detection in `backend/app/services/csv_service.py`: check Equipment ID exists in database
+- [X] T016 [US1] Create preview endpoint `POST /api/v1/computers/import/preview` in `backend/app/api/computers.py`
+- [X] T017 [US1] Create validate row endpoint `POST /api/v1/computers/validate/row` in `backend/app/api/computers.py`
+- [X] T018 [US1] Create confirm import endpoint `POST /api/v1/computers/import/confirm` in `backend/app/api/computers.py`
 
 ### Frontend Implementation
 
-- [ ] T019 [P] [US1] Add preview types to `frontend/src/types/equipment.ts`: ImportPreviewRow, ImportPreviewResult, FieldError, PreviewStatus
-- [ ] T020 [P] [US1] Add API functions in `frontend/src/services/api.ts`: previewImport(), validateRow(), confirmImport()
-- [ ] T021 [US1] Create ImportPreview component in `frontend/src/components/ImportPreview.tsx`: display validated/problematic/duplicate sections with checkboxes
-- [ ] T022 [US1] Create ImportRowEditor component in `frontend/src/components/ImportRowEditor.tsx`: inline editing for problematic rows
-- [ ] T023 [US1] Update ImportModal in `frontend/src/components/ImportModal.tsx`: two-phase workflow (preview → confirm)
+- [X] T019 [P] [US1] Add preview types to `frontend/src/types/equipment.ts`: ImportPreviewRow, ImportPreviewResult, FieldError, PreviewStatus
+- [X] T020 [P] [US1] Add API functions in `frontend/src/services/api.ts`: previewImport(), validateRow(), confirmImport()
+- [X] T021 [US1] Create ImportPreview component in `frontend/src/components/ImportPreview.tsx`: display validated/problematic/duplicate sections with checkboxes
+- [X] T022 [US1] Create ImportRowEditor component in `frontend/src/components/ImportRowEditor.tsx`: inline editing for problematic rows
+- [X] T023 [US1] Update ImportModal in `frontend/src/components/ImportModal.tsx`: two-phase workflow (preview → confirm)
 
 **Checkpoint**: User Story 1 complete - CSV import with preview/confirmation works end-to-end
 
@@ -97,13 +97,13 @@
 
 ### Backend Implementation
 
-- [ ] T024 [US4] Ensure Purpose field is included in create/update endpoints in `backend/app/api/computers.py`
-- [ ] T025 [US4] Add Purpose to CSV export in `backend/app/services/csv_service.py`
+- [X] T024 [US4] Ensure Purpose field is included in create/update endpoints in `backend/app/api/computers.py`
+- [X] T025 [US4] Add Purpose to CSV export in `backend/app/services/csv_service.py`
 
 ### Frontend Implementation
 
-- [ ] T026 [US4] Add Purpose field to EquipmentForm in `frontend/src/components/EquipmentForm.tsx`
-- [ ] T027 [US4] Update equipment display components to show Purpose in detail views
+- [X] T026 [US4] Add Purpose field to EquipmentForm in `frontend/src/components/EquipmentForm.tsx`
+- [X] T027 [US4] Update equipment display components to show Purpose in detail views
 
 **Checkpoint**: User Story 4 complete - Purpose field works in forms, display, and CSV import/export
 
@@ -117,13 +117,13 @@
 
 ### Backend Implementation
 
-- [ ] T028 [US2] Update validation in `backend/app/schemas/equipment.py`: accept any string for enum fields, apply title case normalization
-- [ ] T029 [US2] Update create/update handlers in `backend/app/services/equipment_service.py`: apply title case to enum fields before save
+- [X] T028 [US2] Update validation in `backend/app/schemas/equipment.py`: accept any string for enum fields, apply title case normalization
+- [X] T029 [US2] Update create/update handlers in `backend/app/services/equipment_service.py`: apply title case to enum fields before save
 
 ### Frontend Implementation
 
-- [ ] T030 [US2] Update EquipmentForm dropdowns in `frontend/src/components/EquipmentForm.tsx`: change from fixed dropdowns to combo boxes allowing new entries
-- [ ] T031 [US2] Add client-side title case preview in `frontend/src/components/EquipmentForm.tsx`: show user how their value will be stored
+- [X] T030 [US2] Update EquipmentForm dropdowns in `frontend/src/components/EquipmentForm.tsx`: change from fixed dropdowns to combo boxes allowing new entries
+- [X] T031 [US2] Add client-side title case preview in `frontend/src/components/EquipmentForm.tsx`: show user how their value will be stored
 
 **Checkpoint**: User Story 2 complete - new enumeration values can be added with title case enforcement
 
@@ -137,13 +137,13 @@
 
 ### Backend Implementation
 
-- [ ] T032 [US3] Add field validation endpoint `POST /api/v1/computers/validate/field` in `backend/app/api/computers.py`
+- [X] T032 [US3] Add field validation endpoint `POST /api/v1/computers/validate/field` in `backend/app/api/computers.py`
 
 ### Frontend Implementation
 
-- [ ] T033 [US3] Add real-time validation to IP Address field in `frontend/src/components/EquipmentForm.tsx`: validate IPv4 on blur
-- [ ] T034 [US3] Add real-time validation to MAC Address field in `frontend/src/components/EquipmentForm.tsx`: validate format on blur, show normalized preview
-- [ ] T035 [US3] Add real-time validation to CPU Speed field in `frontend/src/components/EquipmentForm.tsx`: show normalized format preview
+- [X] T033 [US3] Add real-time validation to IP Address field in `frontend/src/components/EquipmentForm.tsx`: validate IPv4 on blur
+- [X] T034 [US3] Add real-time validation to MAC Address field in `frontend/src/components/EquipmentForm.tsx`: validate format on blur, show normalized preview
+- [X] T035 [US3] Add real-time validation to CPU Speed field in `frontend/src/components/EquipmentForm.tsx`: show normalized format preview
 
 **Checkpoint**: User Story 3 complete - field validation works with immediate feedback in equipment form
 
@@ -157,11 +157,11 @@
 
 ### Frontend Implementation
 
-- [ ] T036 [P] [US5] Create MarkdownRenderer component in `frontend/src/components/MarkdownRenderer.tsx`: use react-markdown with DOMPurify sanitization
-- [ ] T037 [US5] Update EquipmentDetail in `frontend/src/components/EquipmentDetail.tsx`: render Notes using MarkdownRenderer
-- [ ] T038 [P] [US5] Update SoftwareDetail in `frontend/src/components/SoftwareDetail.tsx`: render Notes using MarkdownRenderer
-- [ ] T039 [P] [US5] Update SubscriptionDetail in `frontend/src/components/SubscriptionDetail.tsx`: render Notes using MarkdownRenderer
-- [ ] T040 [US5] Add markdown-content CSS styles in `frontend/src/styles/` for consistent markdown appearance
+- [X] T036 [P] [US5] Create MarkdownRenderer component in `frontend/src/components/MarkdownRenderer.tsx`: use react-markdown with DOMPurify sanitization
+- [X] T037 [US5] Update EquipmentDetail in `frontend/src/components/EquipmentDetail.tsx`: render Notes using MarkdownRenderer
+- [X] T038 [P] [US5] Update SoftwareDetail in `frontend/src/components/SoftwareDetail.tsx`: render Notes using MarkdownRenderer
+- [X] T039 [P] [US5] Update SubscriptionDetail in `frontend/src/components/SubscriptionDetail.tsx`: render Notes using MarkdownRenderer
+- [X] T040 [US5] Add markdown-content CSS styles in `frontend/src/styles/` for consistent markdown appearance
 
 **Checkpoint**: User Story 5 complete - Notes render as markdown in all detail views with XSS protection
 

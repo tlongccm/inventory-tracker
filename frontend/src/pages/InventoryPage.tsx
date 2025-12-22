@@ -288,7 +288,7 @@ export default function InventoryPage() {
       <div className="toolbar">
         <div className="toolbar-actions">
           <button className="primary" onClick={handleAdd}>
-            Add Equipment
+            Add
           </button>
           <button className="secondary" onClick={handleExport}>
             Export CSV
@@ -306,9 +306,6 @@ export default function InventoryPage() {
         onClear={handleClearFilters}
       />
 
-      {/* View Group Toggle */}
-      <ViewGroupToggle preferences={preferences} onToggle={toggleGroup} />
-
       {/* Search Box */}
       <SearchBox
         value={searchTerm}
@@ -317,6 +314,9 @@ export default function InventoryPage() {
         onRegexToggle={handleRegexToggle}
         error={searchError}
       />
+
+      {/* View Group Toggle */}
+      <ViewGroupToggle preferences={preferences} onToggle={toggleGroup} />
 
       {/* Equipment List */}
       <EquipmentList

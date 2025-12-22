@@ -8,9 +8,6 @@ import type {
   EquipmentCreate,
   EquipmentUpdate,
   EquipmentType,
-  ComputerSubtype,
-  Status,
-  UsageType,
 } from '../types/equipment';
 
 interface EquipmentFormProps {
@@ -20,9 +17,10 @@ interface EquipmentFormProps {
 }
 
 const EQUIPMENT_TYPES: EquipmentType[] = ['PC', 'Monitor', 'Scanner', 'Printer'];
-const COMPUTER_SUBTYPES: ComputerSubtype[] = ['Desktop', 'Laptop'];
-const STATUSES: Status[] = ['Active', 'Inactive', 'Decommissioned', 'In Repair', 'In Storage'];
-const USAGE_TYPES: UsageType[] = ['Personal', 'Work'];
+// Known values for extensible fields (user can type custom values)
+const COMPUTER_SUBTYPES = ['Desktop', 'Laptop', 'Tower', 'SFF'];
+const STATUSES = ['Active', 'Inactive', 'Decommissioned', 'In Repair', 'In Storage'];
+const USAGE_TYPES = ['Personal', 'Work'];
 
 export default function EquipmentForm({
   equipment,
@@ -45,11 +43,13 @@ export default function EquipmentForm({
     storage: equipment?.storage || '',
     video_card: equipment?.video_card || '',
     display_resolution: equipment?.display_resolution || '',
-    mac_address: equipment?.mac_address || '',
+    mac_lan: equipment?.mac_lan || '',
+    mac_wlan: equipment?.mac_wlan || '',
     manufacturing_date: equipment?.manufacturing_date || '',
     acquisition_date: equipment?.acquisition_date || '',
     location: equipment?.location || '',
     cost: equipment?.cost?.toString() || '',
+    purpose: equipment?.purpose || '',
     cpu_score: equipment?.cpu_score?.toString() || '',
     score_2d: equipment?.score_2d?.toString() || '',
     score_3d: equipment?.score_3d?.toString() || '',
@@ -67,12 +67,45 @@ export default function EquipmentForm({
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Validate IP address format (aaa.bbb.ccc.ddd where each part is 0-255)
+  const isValidIpAddress = (ip: string): boolean => {
+    if (!ip) return true; // Empty is valid (optional field)
+    const ipRegex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const match = ip.match(ipRegex);
+    if (!match) return false;
+    return match.slice(1).every((octet) => {
+      const num = parseInt(octet, 10);
+      return num >= 0 && num <= 255;
+    });
+  };
+
+  // Validate field and update field errors
+  const validateField = (name: string, value: string): boolean => {
+    if (name === 'ip_address' && value && !isValidIpAddress(value)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        ip_address: 'Invalid format. Use aaa.bbb.ccc.ddd (0-255)',
+      }));
+      return false;
+    }
+    // Clear error if valid
+    if (name === 'ip_address') {
+      setFieldErrors((prev) => {
+        const { ip_address, ...rest } = prev;
+        return rest;
+      });
+    }
+    return true;
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    validateField(name, value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,13 +113,21 @@ export default function EquipmentForm({
     setError(null);
 
     // Validation
-    if (!isEdit && !formData.serial_number.trim()) {
-      setError('Serial Number is required');
+    if (!formData.equipment_type) {
+      setError('Equipment Type is required');
       return;
     }
 
-    if (!isEdit && !formData.equipment_type) {
-      setError('Equipment Type is required');
+    // Check for field-level errors
+    if (formData.ip_address && !isValidIpAddress(formData.ip_address)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        ip_address: 'Invalid format. Use aaa.bbb.ccc.ddd (0-255)',
+      }));
+      return;
+    }
+
+    if (Object.keys(fieldErrors).length > 0) {
       return;
     }
 
@@ -95,13 +136,11 @@ export default function EquipmentForm({
 
       // Build data object, converting strings to appropriate types
       const data: EquipmentCreate | EquipmentUpdate = {
-        ...(isEdit ? {} : {
-          equipment_type: formData.equipment_type as EquipmentType,
-          serial_number: formData.serial_number,
-        }),
+        equipment_type: formData.equipment_type as EquipmentType,
+        serial_number: formData.serial_number,
         model: formData.model || undefined,
         manufacturer: formData.manufacturer || undefined,
-        computer_subtype: formData.computer_subtype as ComputerSubtype || undefined,
+        computer_subtype: formData.computer_subtype || undefined,
         cpu_model: formData.cpu_model || undefined,
         cpu_speed: formData.cpu_speed || undefined,
         operating_system: formData.operating_system || undefined,
@@ -109,11 +148,13 @@ export default function EquipmentForm({
         storage: formData.storage || undefined,
         video_card: formData.video_card || undefined,
         display_resolution: formData.display_resolution || undefined,
-        mac_address: formData.mac_address || undefined,
+        mac_lan: formData.mac_lan || undefined,
+        mac_wlan: formData.mac_wlan || undefined,
         manufacturing_date: formData.manufacturing_date || undefined,
         acquisition_date: formData.acquisition_date || undefined,
         location: formData.location || undefined,
         cost: formData.cost ? parseFloat(formData.cost) : undefined,
+        purpose: formData.purpose || undefined,
         cpu_score: formData.cpu_score ? parseInt(formData.cpu_score) : undefined,
         score_2d: formData.score_2d ? parseInt(formData.score_2d) : undefined,
         score_3d: formData.score_3d ? parseInt(formData.score_3d) : undefined,
@@ -124,8 +165,8 @@ export default function EquipmentForm({
         ip_address: formData.ip_address || undefined,
         assignment_date: formData.assignment_date || undefined,
         primary_user: formData.primary_user || undefined,
-        usage_type: formData.usage_type as UsageType || undefined,
-        status: formData.status as Status || undefined,
+        usage_type: formData.usage_type || undefined,
+        status: formData.status || undefined,
         notes: formData.notes || undefined,
       };
 
@@ -161,7 +202,6 @@ export default function EquipmentForm({
                   name="equipment_type"
                   value={formData.equipment_type}
                   onChange={handleChange}
-                  disabled={isEdit}
                   required
                 >
                   {EQUIPMENT_TYPES.map((type) => (
@@ -170,15 +210,13 @@ export default function EquipmentForm({
                 </select>
               </div>
               <div className="form-group">
-                <label htmlFor="serial_number">Serial Number *</label>
+                <label htmlFor="serial_number">Serial Number</label>
                 <input
                   type="text"
                   id="serial_number"
                   name="serial_number"
                   value={formData.serial_number}
                   onChange={handleChange}
-                  disabled={isEdit}
-                  required
                 />
               </div>
               <div className="form-group">
@@ -312,12 +350,23 @@ export default function EquipmentForm({
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="mac_address">MAC Address</label>
+                    <label htmlFor="mac_lan">MAC (LAN)</label>
                     <input
                       type="text"
-                      id="mac_address"
-                      name="mac_address"
-                      value={formData.mac_address}
+                      id="mac_lan"
+                      name="mac_lan"
+                      value={formData.mac_lan}
+                      onChange={handleChange}
+                      placeholder="XX:XX:XX:XX:XX:XX"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="mac_wlan">MAC (WLAN)</label>
+                    <input
+                      type="text"
+                      id="mac_wlan"
+                      name="mac_wlan"
+                      value={formData.mac_wlan}
                       onChange={handleChange}
                       placeholder="XX:XX:XX:XX:XX:XX"
                     />
@@ -353,6 +402,17 @@ export default function EquipmentForm({
                   value={formData.location}
                   onChange={handleChange}
                   placeholder="e.g., Office 201, Building A"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="purpose">Purpose</label>
+                <input
+                  type="text"
+                  id="purpose"
+                  name="purpose"
+                  value={formData.purpose}
+                  onChange={handleChange}
+                  placeholder="e.g., CEO, Trading, Research"
                 />
               </div>
               <div className="form-group">
@@ -467,7 +527,12 @@ export default function EquipmentForm({
                   name="ip_address"
                   value={formData.ip_address}
                   onChange={handleChange}
+                  placeholder="aaa.bbb.ccc.ddd"
+                  className={fieldErrors.ip_address ? 'field-error' : ''}
                 />
+                {fieldErrors.ip_address && (
+                  <span className="field-error-message">{fieldErrors.ip_address}</span>
+                )}
               </div>
               <div className="form-group">
                 <label htmlFor="primary_user">Primary User</label>

@@ -1,0 +1,148 @@
+openapi: 3.0.3
+info:
+  title: Equipment Inventory API - MAC Fields Update
+  description: |
+    API contract changes for splitting MAC address into LAN and WLAN fields.
+    This document shows only the changed/added schema components.
+  version: 1.1.0
+
+paths: {}  # No new endpoints - existing endpoints updated
+
+components:
+  schemas:
+    # Updated schema showing field changes
+    EquipmentBase:
+      type: object
+      description: Base equipment schema with MAC address fields split
+      properties:
+        # ... other fields unchanged ...
+
+        # REMOVED: mac_address
+        # ADDED: mac_lan and mac_wlan
+
+        mac_lan:
+          type: string
+          maxLength: 17
+          nullable: true
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address for wired LAN connection
+          example: "AA:BB:CC:DD:EE:FF"
+
+        mac_wlan:
+          type: string
+          maxLength: 17
+          nullable: true
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address for wireless LAN connection
+          example: "11:22:33:44:55:66"
+
+    EquipmentCreate:
+      allOf:
+        - $ref: '#/components/schemas/EquipmentBase'
+        - type: object
+          required:
+            - equipment_type
+          properties:
+            equipment_type:
+              $ref: '#/components/schemas/EquipmentType'
+            serial_number:
+              type: string
+              maxLength: 100
+              nullable: true
+
+    EquipmentUpdate:
+      allOf:
+        - $ref: '#/components/schemas/EquipmentBase'
+
+    EquipmentResponse:
+      allOf:
+        - $ref: '#/components/schemas/EquipmentBase'
+        - type: object
+          required:
+            - id
+            - equipment_id
+            - equipment_type
+            - created_at
+            - updated_at
+            - is_deleted
+          properties:
+            id:
+              type: integer
+            equipment_id:
+              type: string
+            equipment_type:
+              $ref: '#/components/schemas/EquipmentType'
+            serial_number:
+              type: string
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            is_deleted:
+              type: boolean
+            deleted_at:
+              type: string
+              format: date-time
+              nullable: true
+
+    EquipmentListItem:
+      type: object
+      description: Summary view of equipment for list display
+      properties:
+        equipment_id:
+          type: string
+        equipment_type:
+          $ref: '#/components/schemas/EquipmentType'
+        serial_number:
+          type: string
+          nullable: true
+        equipment_name:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        primary_user:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        is_deleted:
+          type: boolean
+
+        # MAC fields (split)
+        mac_lan:
+          type: string
+          nullable: true
+          description: Wired LAN MAC address
+        mac_wlan:
+          type: string
+          nullable: true
+          description: Wireless LAN MAC address
+
+        # ... other fields unchanged ...
+
+    EquipmentType:
+      type: string
+      enum:
+        - PC
+        - Monitor
+        - Scanner
+        - Printer
+
+  # CSV Import/Export field mapping reference
+  x-csv-field-mapping:
+    description: |
+      CSV column names to API field mapping for import/export.
+      Legacy "MAC Address" column maps to mac_lan for backward compatibility.
+    import:
+      "MAC (LAN)": mac_lan
+      "MAC (WLAN)": mac_wlan
+      "MAC Address": mac_lan  # Legacy support
+    export:
+      mac_lan: "MAC (LAN)"
+      mac_wlan: "MAC (WLAN)"

@@ -231,7 +231,7 @@ export default function SoftwarePage() {
       <div className="toolbar">
         <div className="toolbar-actions">
           <button className="primary" onClick={handleAdd}>
-            Add Software
+            Add
           </button>
           <button className="secondary" onClick={handleExport}>
             Export CSV
@@ -250,21 +250,13 @@ export default function SoftwarePage() {
       />
 
       {/* View Group Toggle */}
-      <div className="view-toggle" style={{ marginBottom: 16 }}>
+      <div className="view-group-toggle">
         {SOFTWARE_VIEW_GROUP_KEYS.map((group) => (
           <button
             key={group}
-            className={viewPreferences[group] ? 'active' : ''}
+            className={`toggle-chip ${viewPreferences[group] ? 'active' : ''}`}
             onClick={() => toggleViewGroup(group)}
-            style={{
-              marginRight: 8,
-              padding: '6px 12px',
-              backgroundColor: viewPreferences[group] ? '#1976d2' : '#e0e0e0',
-              color: viewPreferences[group] ? 'white' : 'black',
-              border: 'none',
-              borderRadius: 4,
-              cursor: 'pointer',
-            }}
+            type="button"
           >
             {SOFTWARE_VIEW_GROUP_LABELS[group]}
           </button>
