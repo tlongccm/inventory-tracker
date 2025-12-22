@@ -109,6 +109,45 @@ def list_unique_owners(
 
 
 # ============================================
+# IMPORT/EXPORT (must be before /{subscription_id} routes)
+# ============================================
+
+@router.get("/export")
+def export_subscriptions(
+    include_deleted: bool = Query(False, description="Include soft-deleted subscriptions"),
+    service: SubscriptionService = Depends(get_subscription_service),
+):
+    """Export subscriptions to CSV."""
+    csv_content = service.export_to_csv(include_deleted=include_deleted)
+
+    return StreamingResponse(
+        io.StringIO(csv_content),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=subscriptions_export.csv"
+        },
+    )
+
+
+@router.post("/import", response_model=ImportResult)
+async def import_subscriptions(
+    file: UploadFile = File(..., description="CSV file to import"),
+    service: SubscriptionService = Depends(get_subscription_service),
+):
+    """Import subscriptions from CSV file."""
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be a CSV file",
+        )
+
+    content = await file.read()
+    csv_content = content.decode('utf-8')
+
+    return service.import_from_csv(csv_content)
+
+
+# ============================================
 # CRUD OPERATIONS
 # ============================================
 
@@ -193,45 +232,6 @@ def restore_subscription(
 
     restored = service.restore(subscription)
     return _to_response(restored, service)
-
-
-# ============================================
-# IMPORT/EXPORT
-# ============================================
-
-@router.get("/export")
-def export_subscriptions(
-    include_deleted: bool = Query(False, description="Include soft-deleted subscriptions"),
-    service: SubscriptionService = Depends(get_subscription_service),
-):
-    """Export subscriptions to CSV."""
-    csv_content = service.export_to_csv(include_deleted=include_deleted)
-
-    return StreamingResponse(
-        io.StringIO(csv_content),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": "attachment; filename=subscriptions_export.csv"
-        },
-    )
-
-
-@router.post("/import", response_model=ImportResult)
-async def import_subscriptions(
-    file: UploadFile = File(..., description="CSV file to import"),
-    service: SubscriptionService = Depends(get_subscription_service),
-):
-    """Import subscriptions from CSV file."""
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File must be a CSV file",
-        )
-
-    content = await file.read()
-    csv_content = content.decode('utf-8')
-
-    return service.import_from_csv(csv_content)
 
 
 # ============================================
