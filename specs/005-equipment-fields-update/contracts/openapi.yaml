@@ -1,0 +1,292 @@
+openapi: 3.0.3
+info:
+  title: Equipment Inventory Tracker - Import Preview API
+  description: API extensions for CSV import with preview and confirmation workflow
+  version: 1.1.0
+
+paths:
+  /api/v1/computers/import/preview:
+    post:
+      summary: Preview CSV import with validation
+      description: |
+        Parses and validates CSV file, returning categorized rows:
+        - validated_rows: Ready to import
+        - problematic_rows: Has validation errors (user can fix)
+        - duplicate_rows: Equipment ID already exists (skip or fix)
+      operationId: previewImport
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file to preview
+              required:
+                - file
+      responses:
+        '200':
+          description: Preview result with categorized rows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResult'
+        '400':
+          description: Invalid file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/computers/import/confirm:
+    post:
+      summary: Confirm and execute import
+      description: |
+        Imports the selected rows from the preview. Rows must have passed
+        validation or been fixed by the user.
+      operationId: confirmImport
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportConfirmRequest'
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/computers/validate/row:
+    post:
+      summary: Validate a single row (for inline editing)
+      description: |
+        Validates a single row of data. Used when user edits a problematic row
+        in the preview to re-validate it.
+      operationId: validateRow
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateRowRequest'
+      responses:
+        '200':
+          description: Validation result for the row
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewRow'
+
+components:
+  schemas:
+    ImportPreviewResult:
+      type: object
+      required:
+        - total_rows
+        - validated_rows
+        - problematic_rows
+        - duplicate_rows
+        - csv_columns
+      properties:
+        total_rows:
+          type: integer
+          description: Total number of data rows in CSV
+          example: 54
+        validated_rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportPreviewRow'
+          description: Rows that passed validation, ready to import
+        problematic_rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportPreviewRow'
+          description: Rows with validation errors
+        duplicate_rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportPreviewRow'
+          description: Rows with Equipment IDs that already exist
+        csv_columns:
+          type: array
+          items:
+            type: string
+          description: Column names detected in CSV
+          example: ["Equipment ID", "Category", "Manufacturer", "Model"]
+
+    ImportPreviewRow:
+      type: object
+      required:
+        - row_number
+        - equipment_id
+        - data
+        - status
+        - errors
+      properties:
+        row_number:
+          type: integer
+          description: Row number in CSV (1-based, excluding header)
+          example: 2
+        equipment_id:
+          type: string
+          description: Equipment ID (from CSV or auto-generated)
+          example: "PC-0001"
+        data:
+          type: object
+          additionalProperties:
+            type: string
+          description: All field values for this row
+        status:
+          type: string
+          enum: [validated, problematic, duplicate]
+          description: Validation status
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+          description: List of validation errors (empty if validated)
+        normalized_values:
+          type: object
+          additionalProperties:
+            type: string
+          description: Values after normalization (MAC, CPU speed, etc.)
+        original_values:
+          type: object
+          additionalProperties:
+            type: string
+          description: Original values from CSV before normalization
+
+    FieldError:
+      type: object
+      required:
+        - field
+        - value
+        - message
+      properties:
+        field:
+          type: string
+          description: Field name with error
+          example: "ip_address"
+        value:
+          type: string
+          description: Original value that failed validation
+          example: "192.168.1.999"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid IPv4 address format. Octet 999 is out of range (0-255)."
+        suggestion:
+          type: string
+          description: Suggested fix (optional)
+          example: "192.168.1.99"
+
+    ImportConfirmRequest:
+      type: object
+      required:
+        - rows
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRowData'
+          description: Rows to import (validated or fixed by user)
+
+    ImportRowData:
+      type: object
+      required:
+        - row_number
+        - data
+      properties:
+        row_number:
+          type: integer
+          description: Original row number for reference
+        data:
+          type: object
+          additionalProperties:
+            type: string
+          description: Field values to import (may be edited by user)
+
+    ValidateRowRequest:
+      type: object
+      required:
+        - data
+      properties:
+        row_number:
+          type: integer
+          description: Row number for context
+        data:
+          type: object
+          additionalProperties:
+            type: string
+          description: Field values to validate
+
+    ImportResult:
+      type: object
+      required:
+        - total_rows
+        - created
+        - updated
+        - restored
+        - failed
+        - errors
+      properties:
+        total_rows:
+          type: integer
+          example: 54
+        created:
+          type: integer
+          example: 50
+        updated:
+          type: integer
+          example: 3
+        restored:
+          type: integer
+          example: 1
+        failed:
+          type: integer
+          example: 0
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportError'
+
+    ImportError:
+      type: object
+      required:
+        - row
+        - serial_number
+        - error
+      properties:
+        row:
+          type: integer
+        serial_number:
+          type: string
+        error:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          example: "Invalid CSV format"
