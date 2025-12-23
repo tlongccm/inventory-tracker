@@ -27,8 +27,25 @@ import SubscriptionDetail from '../components/SubscriptionDetail';
 import SubscriptionForm from '../components/SubscriptionForm';
 import SubscriptionFilterBar from '../components/SubscriptionFilterBar';
 import SubscriptionImportModal from '../components/SubscriptionImportModal';
+import ShareLinkButton from '../components/ShareLinkButton';
+import SearchBox from '../components/SearchBox';
+import { useSearchParams } from 'react-router-dom';
+import { parseUrlParams, serializeFilters } from '../utils/urlParams';
+import { validateRegex } from '../utils/search';
+
+// Subscription view group configuration
+const SUBSCRIPTION_VIEW_GROUP_KEYS = ['ai_tools', 'sa_resources', 'by_distribution', 'by_category'] as const;
+type SubscriptionViewGroupKey = typeof SUBSCRIPTION_VIEW_GROUP_KEYS[number];
+const SUBSCRIPTION_VIEW_GROUP_LABELS: Record<SubscriptionViewGroupKey, string> = {
+  ai_tools: 'AI Tools',
+  sa_resources: 'SA Resources',
+  by_distribution: 'By Distribution',
+  by_category: 'By Category',
+};
 
 export default function SubscriptionsPage() {
+  // URL params
+  const [searchParams, setSearchParams] = useSearchParams();
   // Context
   const { categories, loading: categoriesLoading } = useCategories();
 
@@ -38,7 +55,18 @@ export default function SubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<SubscriptionFilters>({});
+  const [filters, setFilters] = useState<SubscriptionFilters>(() => {
+    // Initialize filters from URL params
+    const params = parseUrlParams(searchParams);
+    const initialFilters: SubscriptionFilters = {};
+    if (params.status) initialFilters.status = params.status as SubscriptionFilters['status'];
+    if (params.category_id) initialFilters.category_id = params.category_id as number;
+    if (params.ccm_owner) initialFilters.ccm_owner = params.ccm_owner as string;
+    if (params.value_level) initialFilters.value_level = params.value_level as SubscriptionFilters['value_level'];
+    if (params.sort) initialFilters.sort_by = params.sort as string;
+    if (params.order) initialFilters.sort_order = params.order as 'asc' | 'desc';
+    return initialFilters;
+  });
   const [owners, setOwners] = useState<string[]>([]);
 
   // Modal states
@@ -46,14 +74,52 @@ export default function SubscriptionsPage() {
   const [editMode, setEditMode] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
-  // Search state
-  const [searchTerm, setSearchTerm] = useState('');
+  // Search state with regex support
+  const [searchTerm, setSearchTerm] = useState(() => {
+    const params = parseUrlParams(searchParams);
+    return (params.search as string) || '';
+  });
+  const [isRegex, setIsRegex] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
-  // Filter subscriptions based on search term (client-side)
+  // View group preferences (placeholder - will control column visibility in future)
+  const [viewPreferences, setViewPreferences] = useState<Record<SubscriptionViewGroupKey, boolean>>({
+    ai_tools: false,
+    sa_resources: false,
+    by_distribution: false,
+    by_category: false,
+  });
+
+  // Filter subscriptions based on search term (client-side, supports regex)
   const filteredSubscriptions = useMemo(() => {
     if (!searchTerm.trim()) {
+      setSearchError(null);
       return subscriptions;
     }
+
+    if (isRegex) {
+      const validation = validateRegex(searchTerm);
+      if (!validation.valid) {
+        setSearchError(validation.error || 'Invalid regex');
+        return subscriptions;
+      }
+      setSearchError(null);
+      try {
+        const regex = new RegExp(searchTerm, 'i');
+        return subscriptions.filter((sub) =>
+          regex.test(sub.subscription_id) ||
+          regex.test(sub.provider) ||
+          (sub.category_name && regex.test(sub.category_name)) ||
+          (sub.ccm_owner && regex.test(sub.ccm_owner)) ||
+          (sub.description_value && regex.test(sub.description_value)) ||
+          (sub.subscriber_email && regex.test(sub.subscriber_email))
+        );
+      } catch {
+        return subscriptions;
+      }
+    }
+
+    setSearchError(null);
     const term = searchTerm.toLowerCase();
     return subscriptions.filter((sub) =>
       sub.subscription_id.toLowerCase().includes(term) ||
@@ -63,7 +129,7 @@ export default function SubscriptionsPage() {
       (sub.description_value && sub.description_value.toLowerCase().includes(term)) ||
       (sub.subscriber_email && sub.subscriber_email.toLowerCase().includes(term))
     );
-  }, [subscriptions, searchTerm]);
+  }, [subscriptions, searchTerm, isRegex]);
 
   // Load subscriptions list
   const loadSubscriptions = useCallback(async () => {
@@ -94,6 +160,21 @@ export default function SubscriptionsPage() {
     loadSubscriptions();
     loadOwners();
   }, [loadSubscriptions, loadOwners]);
+
+  // Sync filters and search to URL
+  useEffect(() => {
+    const urlParams: Record<string, string | number | undefined> = {};
+    if (filters.status) urlParams.status = filters.status;
+    if (filters.category_id) urlParams.category_id = filters.category_id;
+    if (filters.ccm_owner) urlParams.ccm_owner = filters.ccm_owner;
+    if (filters.value_level) urlParams.value_level = filters.value_level;
+    if (filters.sort_by) urlParams.sort = filters.sort_by;
+    if (filters.sort_order) urlParams.order = filters.sort_order;
+    if (searchTerm.trim()) urlParams.search = searchTerm;
+
+    const newParams = serializeFilters(urlParams);
+    setSearchParams(newParams, { replace: true });
+  }, [filters, searchTerm, setSearchParams]);
 
   // Select subscription to view details
   const handleSelect = async (subscriptionId: string) => {
@@ -186,7 +267,51 @@ export default function SubscriptionsPage() {
   // Clear filters
   const handleClearFilters = () => {
     setFilters({});
-    setSearchTerm('');
+  };
+
+  // Handle search change
+  const handleSearchChange = useCallback((term: string) => {
+    setSearchTerm(term);
+    if (!term.trim()) {
+      setSearchError(null);
+    }
+  }, []);
+
+  // Handle regex toggle
+  const handleRegexToggle = useCallback(() => {
+    setIsRegex((prev) => !prev);
+    if (!isRegex && searchTerm.trim()) {
+      const validation = validateRegex(searchTerm);
+      if (!validation.valid) {
+        setSearchError(validation.error || 'Invalid regex');
+      } else {
+        setSearchError(null);
+      }
+    } else {
+      setSearchError(null);
+    }
+  }, [isRegex, searchTerm]);
+
+  // Toggle view group (mutually exclusive - only one can be active at a time)
+  const toggleViewGroup = (group: SubscriptionViewGroupKey) => {
+    setViewPreferences((prev) => {
+      // If clicking the already-active button, deselect it
+      if (prev[group]) {
+        return {
+          ai_tools: false,
+          sa_resources: false,
+          by_distribution: false,
+          by_category: false,
+        };
+      }
+      // Otherwise, select only the clicked button
+      return {
+        ai_tools: group === 'ai_tools',
+        sa_resources: group === 'sa_resources',
+        by_distribution: group === 'by_distribution',
+        by_category: group === 'by_category',
+      };
+    });
   };
 
   // Handle column sort
@@ -224,6 +349,7 @@ export default function SubscriptionsPage() {
           <button className="secondary" onClick={() => setShowImport(true)}>
             Import CSV
           </button>
+          <ShareLinkButton />
         </div>
       </div>
 
@@ -232,11 +358,32 @@ export default function SubscriptionsPage() {
         filters={filters}
         categories={categories}
         owners={owners}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
         onChange={handleFilterChange}
         onClear={handleClearFilters}
       />
+
+      {/* Search Box */}
+      <SearchBox
+        value={searchTerm}
+        onChange={handleSearchChange}
+        isRegex={isRegex}
+        onRegexToggle={handleRegexToggle}
+        error={searchError}
+      />
+
+      {/* View Group Toggle */}
+      <div className="view-group-toggle">
+        {SUBSCRIPTION_VIEW_GROUP_KEYS.map((group) => (
+          <button
+            key={group}
+            className={`toggle-chip ${viewPreferences[group] ? 'active' : ''}`}
+            onClick={() => toggleViewGroup(group)}
+            type="button"
+          >
+            {SUBSCRIPTION_VIEW_GROUP_LABELS[group]}
+          </button>
+        ))}
+      </div>
 
       {/* Subscription List */}
       <SubscriptionList

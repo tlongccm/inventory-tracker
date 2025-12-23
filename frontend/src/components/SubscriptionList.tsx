@@ -68,36 +68,37 @@ interface ColumnDef {
 }
 
 // All columns for the subscription table (headers match legacy CSV)
+// All columns are sortable; numeric fields right-aligned; date fields center-aligned
 const ALL_COLUMNS: ColumnDef[] = [
   // Core identification
   { key: 'subscription_id', label: 'ID', sortable: true, width: 90 },
   { key: 'provider', label: 'Provider', sortable: true, width: 180 },
   { key: 'category_name', label: 'Category', sortable: true, width: 140 },
   { key: 'subcategory_name', label: 'Sector / Subject', sortable: true, width: 120 },
-  { key: 'link', label: 'URL', sortable: false, width: 180 },
-  { key: 'username', label: 'Username', sortable: false, width: 150 },
-  { key: 'password', label: 'Password', sortable: false, width: 120 },
-  { key: 'in_lastpass', label: 'In LastPass', sortable: false, width: 80 },
-  { key: 'authentication', label: 'Auth Method', sortable: false, width: 120 },
+  { key: 'link', label: 'URL', sortable: true, width: 180 },
+  { key: 'username', label: 'Username', sortable: true, width: 150 },
+  { key: 'password', label: 'Password', sortable: true, width: 120 },
+  { key: 'in_lastpass', label: 'In LastPass', sortable: true, width: 80, align: 'center' },
+  { key: 'authentication', label: 'Auth Method', sortable: true, width: 120 },
   { key: 'status', label: 'Status', sortable: true, width: 80 },
-  { key: 'description_value', label: 'Description & Value to CCM', sortable: false, width: 200 },
-  { key: 'value_level', label: 'Value', sortable: true, width: 60 },
+  { key: 'description_value', label: 'Description & Value to CCM', sortable: true, width: 200 },
+  { key: 'value_level', label: 'Value', sortable: true, width: 60, align: 'center' },
   { key: 'ccm_owner', label: 'CCM Owner', sortable: true, width: 100 },
-  { key: 'subscription_log', label: 'Subscription Log', sortable: false, width: 150 },
-  { key: 'payment_method', label: 'Payment Method', sortable: false, width: 130 },
-  { key: 'cost', label: 'Payment Amount', sortable: false, width: 110, align: 'right' },
-  { key: 'payment_frequency', label: 'Payment Frequency', sortable: false, width: 120 },
+  { key: 'subscription_log', label: 'Subscription Log', sortable: true, width: 150 },
+  { key: 'payment_method', label: 'Payment Method', sortable: true, width: 130 },
+  { key: 'cost', label: 'Payment Amount', sortable: true, width: 110, align: 'right' },
+  { key: 'payment_frequency', label: 'Payment Frequency', sortable: true, width: 120 },
   { key: 'annual_cost', label: 'Annual Cost', sortable: true, width: 100, align: 'right' },
-  { key: 'renewal_date', label: 'Renewal Date', sortable: true, width: 100 },
-  { key: 'last_confirmed_alive', label: 'Last confirmed alive', sortable: true, width: 130 },
-  { key: 'main_vendor_contact', label: 'Main contact', sortable: false, width: 150 },
-  { key: 'subscriber_email', label: 'Destination email', sortable: false, width: 160 },
-  { key: 'forward_to', label: 'Forward to', sortable: false, width: 140 },
-  { key: 'email_routing', label: 'RR email routing', sortable: false, width: 120 },
-  { key: 'email_volume_per_week', label: 'Email volume / week', sortable: false, width: 120 },
-  { key: 'notes', label: 'Notes', sortable: false, width: 150 },
-  { key: 'actions_todos', label: 'Actions', sortable: false, width: 150 },
-  { key: 'access_level_required', label: 'Access Level Required', sortable: false, width: 140 },
+  { key: 'renewal_date', label: 'Renewal Date', sortable: true, width: 100, align: 'center' },
+  { key: 'last_confirmed_alive', label: 'Last confirmed alive', sortable: true, width: 130, align: 'center' },
+  { key: 'main_vendor_contact', label: 'Main contact', sortable: true, width: 150 },
+  { key: 'subscriber_email', label: 'Destination email', sortable: true, width: 160 },
+  { key: 'forward_to', label: 'Forward to', sortable: true, width: 140 },
+  { key: 'email_routing', label: 'RR email routing', sortable: true, width: 120 },
+  { key: 'email_volume_per_week', label: 'Email volume / week', sortable: true, width: 120, align: 'right' },
+  { key: 'notes', label: 'Notes', sortable: true, width: 150 },
+  { key: 'actions_todos', label: 'Actions', sortable: true, width: 150 },
+  { key: 'access_level_required', label: 'Access Level Required', sortable: true, width: 140 },
 ];
 
 export default function SubscriptionList({
@@ -203,12 +204,14 @@ export default function SubscriptionList({
         return renderUrlCell(sub.link);
       case 'renewal_date':
       case 'last_confirmed_alive':
-        return formatDate(value as string | null);
-      case 'cost':
+        // Display as text (no date formatting)
+        return value || '';
       case 'annual_cost':
+      case 'cost':
         return formatCurrency(value as number | null);
       case 'in_lastpass':
-        return value === true ? 'Yes' : value === false ? 'No' : '-';
+        // Show 'Y' or blank
+        return value === true ? 'Y' : '';
       case 'description_value':
       case 'subscription_log':
       case 'actions_todos':
@@ -218,9 +221,9 @@ export default function SubscriptionList({
         if (typeof value === 'string' && value.length > 50) {
           return <span title={value}>{value.substring(0, 50)}...</span>;
         }
-        return value || '-';
+        return value || '';
       default:
-        return value ?? '-';
+        return value ?? '';
     }
   };
 

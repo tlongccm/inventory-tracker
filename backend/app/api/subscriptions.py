@@ -74,7 +74,7 @@ def list_subscriptions(
             link=sub.link,
             authentication=sub.authentication,
             username=sub.username,
-            password_masked=service.get_masked_password(sub),
+            password=service.get_deobfuscated_password(sub),
             in_lastpass=sub.in_lastpass,
             access_level_required=sub.access_level_required,
             # Financial View fields
@@ -82,6 +82,7 @@ def list_subscriptions(
             cost=sub.cost,
             annual_cost=sub.annual_cost,
             payment_frequency=sub.payment_frequency,
+            notes=sub.notes,
             # Communication View fields
             subscriber_email=sub.subscriber_email,
             forward_to=sub.forward_to,
@@ -262,6 +263,7 @@ def _to_response(subscription, service: SubscriptionService) -> SubscriptionResp
         cost=subscription.cost,
         annual_cost=subscription.annual_cost,
         payment_frequency=subscription.payment_frequency,
+        notes=subscription.notes,
         renewal_date=subscription.renewal_date,
         last_confirmed_alive=subscription.last_confirmed_alive,
         main_vendor_contact=subscription.main_vendor_contact,

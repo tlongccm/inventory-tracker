@@ -26,6 +26,7 @@ import SoftwareForm from '../components/SoftwareForm';
 import SoftwareFilterBar from '../components/SoftwareFilterBar';
 import SoftwareImportModal from '../components/SoftwareImportModal';
 import SearchBox from '../components/SearchBox';
+import ShareLinkButton from '../components/ShareLinkButton';
 import {
   getSoftwareVisibleColumns,
   SOFTWARE_DEFAULT_COLUMN_WIDTHS,
@@ -33,15 +34,29 @@ import {
   SOFTWARE_VIEW_GROUP_LABELS,
   type SoftwareViewGroupKey,
 } from '../utils/softwareColumns';
+import { useSearchParams } from 'react-router-dom';
+import { parseUrlParams, serializeFilters } from '../utils/urlParams';
 
 export default function SoftwarePage() {
+  // URL params
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // State
   const [software, setSoftware] = useState<SoftwareListItem[]>([]);
   const [selectedSoftware, setSelectedSoftware] = useState<Software | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<SoftwareFilters>({});
+  const [filters, setFilters] = useState<SoftwareFilters>(() => {
+    // Initialize filters from URL params
+    const params = parseUrlParams(searchParams);
+    const initialFilters: SoftwareFilters = {};
+    if (params.status) initialFilters.status = params.status as SoftwareFilters['status'];
+    if (params.category) initialFilters.category = params.category as string;
+    if (params.sort) initialFilters.sort_by = params.sort as SoftwareFilters['sort_by'];
+    if (params.order) initialFilters.sort_order = params.order as 'asc' | 'desc';
+    return initialFilters;
+  });
 
   // Modal states
   const [showForm, setShowForm] = useState(false);
@@ -61,7 +76,10 @@ export default function SoftwarePage() {
   );
 
   // Search state
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => {
+    const params = parseUrlParams(searchParams);
+    return (params.search as string) || '';
+  });
 
   // Calculate visible columns based on preferences
   const visibleColumns = useMemo(
@@ -90,6 +108,19 @@ export default function SoftwarePage() {
   useEffect(() => {
     loadSoftware();
   }, [loadSoftware]);
+
+  // Sync filters and search to URL
+  useEffect(() => {
+    const urlParams: Record<string, string | undefined> = {};
+    if (filters.status) urlParams.status = filters.status;
+    if (filters.category) urlParams.category = filters.category;
+    if (filters.sort_by) urlParams.sort = filters.sort_by;
+    if (filters.sort_order) urlParams.order = filters.sort_order;
+    if (searchTerm.trim()) urlParams.search = searchTerm;
+
+    const newParams = serializeFilters(urlParams);
+    setSearchParams(newParams, { replace: true });
+  }, [filters, searchTerm, setSearchParams]);
 
   // Select software to view details
   const handleSelect = async (softwareId: string) => {
@@ -239,6 +270,7 @@ export default function SoftwarePage() {
           <button className="secondary" onClick={() => setShowImport(true)}>
             Import CSV
           </button>
+          <ShareLinkButton />
         </div>
       </div>
 
@@ -247,6 +279,15 @@ export default function SoftwarePage() {
         filters={filters}
         onChange={handleFilterChange}
         onClear={handleClearFilters}
+      />
+
+      {/* Search Box */}
+      <SearchBox
+        value={searchTerm}
+        onChange={handleSearchChange}
+        isRegex={false}
+        onRegexToggle={() => {}}
+        error={null}
       />
 
       {/* View Group Toggle */}
@@ -262,15 +303,6 @@ export default function SoftwarePage() {
           </button>
         ))}
       </div>
-
-      {/* Search Box */}
-      <SearchBox
-        value={searchTerm}
-        onChange={handleSearchChange}
-        isRegex={false}
-        onRegexToggle={() => {}}
-        error={null}
-      />
 
       {/* Software List */}
       <SoftwareList

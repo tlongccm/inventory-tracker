@@ -31,6 +31,7 @@ class SubscriptionCreate(BaseModel):
     cost: Optional[str] = Field(None, max_length=100)
     annual_cost: Optional[Decimal] = Field(None, ge=0)
     payment_frequency: Optional[PaymentFrequency] = None
+    notes: Optional[str] = None
     renewal_date: Optional[date] = None
     last_confirmed_alive: Optional[date] = None
     main_vendor_contact: Optional[str] = Field(None, max_length=500)
@@ -61,6 +62,7 @@ class SubscriptionUpdate(BaseModel):
     cost: Optional[str] = Field(None, max_length=100)
     annual_cost: Optional[Decimal] = Field(None, ge=0)
     payment_frequency: Optional[PaymentFrequency] = None
+    notes: Optional[str] = None
     renewal_date: Optional[date] = None
     last_confirmed_alive: Optional[date] = None
     main_vendor_contact: Optional[str] = Field(None, max_length=500)
@@ -94,7 +96,7 @@ class SubscriptionListItem(BaseModel):
     link: Optional[str] = None
     authentication: Optional[str] = None
     username: Optional[str] = None
-    password_masked: Optional[str] = None  # Password shown as asterisks
+    password: Optional[str] = None  # Deobfuscated (plaintext)
     in_lastpass: Optional[bool] = None
     access_level_required: Optional[str] = None
 
@@ -103,6 +105,7 @@ class SubscriptionListItem(BaseModel):
     cost: Optional[str] = None
     annual_cost: Optional[Decimal] = None
     payment_frequency: Optional[PaymentFrequency] = None
+    notes: Optional[str] = None
 
     # Communication View fields
     subscriber_email: Optional[str] = None
@@ -144,6 +147,7 @@ class SubscriptionResponse(BaseModel):
     cost: Optional[str] = None
     annual_cost: Optional[Decimal] = None
     payment_frequency: Optional[PaymentFrequency] = None
+    notes: Optional[str] = None
     renewal_date: Optional[date] = None
     last_confirmed_alive: Optional[date] = None
     main_vendor_contact: Optional[str] = None

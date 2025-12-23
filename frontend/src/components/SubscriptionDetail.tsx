@@ -32,8 +32,8 @@ function formatCurrency(value: number | null): string {
 }
 
 function formatBoolean(value: boolean | null): string {
-  if (value === null || value === undefined) return '-';
-  return value ? 'Yes' : 'No';
+  // Show 'Y' for true, blank for false/null
+  return value === true ? 'Y' : '';
 }
 
 export default function SubscriptionDetail({
@@ -94,7 +94,7 @@ export default function SubscriptionDetail({
             <DetailRow label="Subscription ID" value={subscription.subscription_id} />
             <DetailRow label="Provider" value={subscription.provider} />
             <DetailRow label="Category" value={subscription.category_name} />
-            <DetailRow label="Subcategory" value={subscription.subcategory_name} />
+            <DetailRow label="Sector / Subject" value={subscription.subcategory_name} />
             <DetailRow label="Status" value={subscription.status} />
             <DetailRow label="CCM Owner" value={subscription.ccm_owner} />
             <DetailRow label="Value Level" value={subscription.value_level} />
@@ -126,7 +126,7 @@ export default function SubscriptionDetail({
                 )}
               </span>
             </div>
-            <DetailRow label="In Lastpass?" value={formatBoolean(subscription.in_lastpass)} />
+            <DetailRow label="In LastPass" value={formatBoolean(subscription.in_lastpass)} />
             <DetailRow label="Access Level Required" value={subscription.access_level_required} />
           </section>
 
@@ -137,7 +137,7 @@ export default function SubscriptionDetail({
             <DetailRow label="Cost" value={subscription.cost} />
             <DetailRow label="Annual Cost" value={formatCurrency(subscription.annual_cost)} />
             <DetailRow label="Payment Frequency" value={subscription.payment_frequency} />
-            <DetailRow label="Renewal Date" value={formatDate(subscription.renewal_date)} />
+            <DetailRow label="Renewal Date" value={subscription.renewal_date} />
           </section>
 
           {/* Communication */}

@@ -22,7 +22,9 @@ def obfuscate_password(password: Optional[str]) -> Optional[str]:
     """
     if not password:
         return None
-    obfuscated = bytes([ord(c) ^ XOR_KEY for c in password])
+    # Encode to UTF-8 first to handle Unicode characters
+    password_bytes = password.encode('utf-8')
+    obfuscated = bytes([b ^ XOR_KEY for b in password_bytes])
     return base64.b64encode(obfuscated).decode('utf-8')
 
 
@@ -38,7 +40,9 @@ def deobfuscate_password(obfuscated: Optional[str]) -> Optional[str]:
     if not obfuscated:
         return None
     data = base64.b64decode(obfuscated)
-    return ''.join(chr(b ^ XOR_KEY) for b in data)
+    # XOR back and decode from UTF-8
+    deobfuscated = bytes([b ^ XOR_KEY for b in data])
+    return deobfuscated.decode('utf-8')
 
 
 def mask_password(password: Optional[str], visible_chars: int = 0) -> str:

@@ -66,6 +66,7 @@ class Subscription(Base):
     cost = Column(String(100))  # Text description of cost
     annual_cost = Column(Numeric(12, 2))
     payment_frequency = Column(SQLEnum(PaymentFrequency))
+    notes = Column(Text)  # Notes field from legacy CSV
     renewal_date = Column(Date)
 
     # Communication

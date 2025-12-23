@@ -31,19 +31,35 @@ import ImportModal from '../components/ImportModal';
 import ReassignmentModal from '../components/ReassignmentModal';
 import ViewGroupToggle from '../components/ViewGroupToggle';
 import SearchBox from '../components/SearchBox';
+import ShareLinkButton from '../components/ShareLinkButton';
 import { useViewPreferences } from '../hooks/useViewPreferences';
 import { useColumnWidths } from '../hooks/useColumnWidths';
 import { getVisibleColumns } from '../utils/columns';
 import { filterEquipment, validateRegex } from '../utils/search';
+import { useSearchParams } from 'react-router-dom';
+import { parseUrlParams, serializeFilters } from '../utils/urlParams';
 
 export default function InventoryPage() {
+  // URL params
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // State
   const [equipment, setEquipment] = useState<EquipmentListItem[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<EquipmentFilters>({});
+  const [filters, setFilters] = useState<EquipmentFilters>(() => {
+    // Initialize filters from URL params
+    const params = parseUrlParams(searchParams);
+    const initialFilters: EquipmentFilters = {};
+    if (params.equipment_type) initialFilters.equipment_type = params.equipment_type as EquipmentFilters['equipment_type'];
+    if (params.status) initialFilters.status = params.status as EquipmentFilters['status'];
+    if (params.location) initialFilters.location = params.location as string;
+    if (params.sort) initialFilters.sort_by = params.sort as EquipmentFilters['sort_by'];
+    if (params.order) initialFilters.sort_order = params.order as 'asc' | 'desc';
+    return initialFilters;
+  });
 
   // Modal states
   const [showForm, setShowForm] = useState(false);
@@ -57,7 +73,10 @@ export default function InventoryPage() {
   // View preferences and search state
   const { preferences, toggleGroup } = useViewPreferences();
   const { widths: columnWidths, setColumnWidth } = useColumnWidths();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => {
+    const params = parseUrlParams(searchParams);
+    return (params.search as string) || '';
+  });
   const [isRegex, setIsRegex] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
@@ -126,6 +145,20 @@ export default function InventoryPage() {
   useEffect(() => {
     loadEquipment();
   }, [loadEquipment]);
+
+  // Sync filters and search to URL
+  useEffect(() => {
+    const urlParams: Record<string, string | undefined> = {};
+    if (filters.equipment_type) urlParams.equipment_type = filters.equipment_type;
+    if (filters.status) urlParams.status = filters.status;
+    if (filters.location) urlParams.location = filters.location;
+    if (filters.sort_by) urlParams.sort = filters.sort_by;
+    if (filters.sort_order) urlParams.order = filters.sort_order;
+    if (searchTerm.trim()) urlParams.search = searchTerm;
+
+    const newParams = serializeFilters(urlParams);
+    setSearchParams(newParams, { replace: true });
+  }, [filters, searchTerm, setSearchParams]);
 
   // Select equipment to view details
   const handleSelect = async (equipmentId: string) => {
@@ -296,6 +329,7 @@ export default function InventoryPage() {
           <button className="secondary" onClick={() => setShowImport(true)}>
             Import CSV
           </button>
+          <ShareLinkButton />
         </div>
       </div>
 

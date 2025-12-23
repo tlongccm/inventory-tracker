@@ -225,7 +225,7 @@ export default function SubscriptionForm({
                   </select>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="subcategory_id">Subcategory</label>
+                  <label htmlFor="subcategory_id">Sector / Subject</label>
                   <select
                     id="subcategory_id"
                     name="subcategory_id"
@@ -233,7 +233,7 @@ export default function SubscriptionForm({
                     onChange={handleChange}
                     disabled={!formData.category_id}
                   >
-                    <option value="">-- Select Subcategory --</option>
+                    <option value="">-- Select Sector / Subject --</option>
                     {subcategories.map((sub) => (
                       <option key={sub.id} value={sub.id}>
                         {sub.name}

@@ -291,11 +291,196 @@ class SubscriptionService:
 
         return output.getvalue()
 
+    def _normalize_csv_row(self, row: dict) -> dict:
+        """Normalize CSV row by mapping legacy column names to expected names.
+
+        Supports both the app's native format and legacy spreadsheet format.
+        """
+        # Mapping from legacy/alternative column names to expected names
+        column_mapping = {
+            # Legacy name -> Expected name
+            'Provider': 'provider',
+            'Category': 'category_name',
+            'Sector / Subject': 'subcategory_name',
+            'Sector /Subject': 'subcategory_name',  # Handle CSV without space after slash
+            'URL': 'link',
+            'Username': 'username',
+            'Password': 'password',
+            'In LastPass': 'in_lastpass',
+            'In Lastpass?': 'in_lastpass',  # Handle CSV with question mark
+            'Authentication Method': 'authentication',
+            'Status': 'status',
+            'Description & Value to CCM': 'description_value',
+            'Value': 'value_level',
+            'CCM Owner': 'ccm_owner',
+            'Subscription Log': 'subscription_log',
+            'Payment Method': 'payment_method',
+            'Payment Amount': 'cost',
+            'Payment Frequency': 'payment_frequency',
+            'Notes': 'notes',
+            'Annual Cost': 'annual_cost',
+            'Renewal Frequency': 'renewal_frequency',
+            'Renewal Date': 'renewal_date',
+            'Renew Date': 'renewal_date',  # Handle CSV variant
+            'Last confirmed alive': 'last_confirmed_alive',
+            'Main contact': 'main_vendor_contact',
+            'Destination email': 'subscriber_email',
+            'Forward to': 'forward_to',
+            'RR email routing': 'email_routing',
+            'Email volume / week': 'email_volume_per_week',
+            'Actions': 'actions_todos',
+            'Access Level Required': 'access_level_required',
+        }
+
+        normalized = {}
+        for key, value in row.items():
+            # Try to map the key, otherwise use lowercase version
+            normalized_key = column_mapping.get(key, key.lower().replace(' ', '_'))
+            normalized[normalized_key] = value
+
+        return normalized
+
+    def _parse_date_flexible(self, date_str: str) -> Optional[date]:
+        """Parse date from various formats (ISO, M/D/YYYY, etc.)."""
+        if not date_str:
+            return None
+
+        date_str = date_str.strip()
+        if not date_str:
+            return None
+
+        # Try ISO format first (YYYY-MM-DD)
+        try:
+            return date.fromisoformat(date_str)
+        except ValueError:
+            pass
+
+        # Try M/D/YYYY format (common in Excel exports)
+        try:
+            parts = date_str.split('/')
+            if len(parts) == 3:
+                month, day, year = int(parts[0]), int(parts[1]), int(parts[2])
+                return date(year, month, day)
+        except (ValueError, IndexError):
+            pass
+
+        return None
+
+    def _normalize_payment_frequency(self, freq_str: str) -> Optional[PaymentFrequency]:
+        """Normalize payment frequency string to enum value."""
+        if not freq_str:
+            return None
+
+        freq_lower = freq_str.strip().lower()
+
+        if freq_lower == 'monthly':
+            return PaymentFrequency.MONTHLY
+        elif freq_lower in ('yearly', 'annual', 'annually'):
+            return PaymentFrequency.ANNUAL
+        elif freq_lower:
+            # Quarterly, Semiannual, Ad hoc, etc. -> Other
+            return PaymentFrequency.OTHER
+
+        return None
+
+    def _normalize_value_level(self, value_str: str) -> Optional[ValueLevel]:
+        """Normalize value level string to enum value."""
+        if not value_str:
+            return None
+
+        value_upper = value_str.strip().upper()
+
+        if value_upper == 'H':
+            return ValueLevel.HIGH
+        elif value_upper == 'M':
+            return ValueLevel.MEDIUM
+        elif value_upper == 'L':
+            return ValueLevel.LOW
+
+        # Ignore invalid values like "-", "?"
+        return None
+
+    def _get_or_create_category(self, name: str, categories_cache: dict) -> Optional[int]:
+        """Get existing category ID or create new one. Returns category ID."""
+        if not name:
+            return None
+
+        name = name.strip()
+        if not name:
+            return None
+
+        # Check cache first
+        if name in categories_cache:
+            return categories_cache[name]
+
+        # Look up in database
+        category = self.db.query(Category).filter(Category.name == name).first()
+        if category:
+            categories_cache[name] = category.id
+            return category.id
+
+        # Create new category
+        max_order = self.db.query(func.max(Category.display_order)).scalar() or 0
+        new_category = Category(name=name, display_order=max_order + 1)
+        self.db.add(new_category)
+        self.db.flush()
+        categories_cache[name] = new_category.id
+        return new_category.id
+
+    def _get_or_create_subcategory(
+        self,
+        name: str,
+        category_id: int,
+        subcategories_cache: dict,
+    ) -> Optional[int]:
+        """Get existing subcategory ID or create new one. Returns subcategory ID."""
+        if not name or not category_id:
+            return None
+
+        name = name.strip()
+        if not name:
+            return None
+
+        cache_key = (category_id, name)
+
+        # Check cache first
+        if cache_key in subcategories_cache:
+            return subcategories_cache[cache_key]
+
+        # Look up in database
+        subcategory = self.db.query(Subcategory).filter(
+            Subcategory.category_id == category_id,
+            Subcategory.name == name
+        ).first()
+        if subcategory:
+            subcategories_cache[cache_key] = subcategory.id
+            return subcategory.id
+
+        # Create new subcategory
+        max_order = self.db.query(func.max(Subcategory.display_order)).filter(
+            Subcategory.category_id == category_id
+        ).scalar() or 0
+        new_subcategory = Subcategory(
+            category_id=category_id,
+            name=name,
+            display_order=max_order + 1
+        )
+        self.db.add(new_subcategory)
+        self.db.flush()
+        subcategories_cache[cache_key] = new_subcategory.id
+        return new_subcategory.id
+
     def import_from_csv(self, csv_content: str) -> ImportResult:
         """Import subscriptions from CSV content.
 
         Returns import result with counts and errors.
+        Supports both the app's native CSV format and legacy spreadsheet format.
+        Auto-creates categories and subcategories if they don't exist.
         """
+        # Strip UTF-8 BOM if present (common in Excel-exported CSVs)
+        if csv_content.startswith('\ufeff'):
+            csv_content = csv_content[1:]
+
         reader = csv.DictReader(io.StringIO(csv_content))
 
         result = ImportResult(
@@ -307,14 +492,16 @@ class SubscriptionService:
             errors=[],
         )
 
-        # Build category/subcategory lookup maps
-        categories = {c.name: c.id for c in self.db.query(Category).all()}
-        subcategories = {}
+        # Build category/subcategory lookup caches (will be populated as we go)
+        categories_cache = {c.name: c.id for c in self.db.query(Category).all()}
+        subcategories_cache = {}
         for s in self.db.query(Subcategory).all():
             key = (s.category_id, s.name)
-            subcategories[key] = s.id
+            subcategories_cache[key] = s.id
 
-        for row_num, row in enumerate(reader, start=2):  # Start at 2 (1 is header)
+        for row_num, raw_row in enumerate(reader, start=2):  # Start at 2 (1 is header)
+            # Normalize column names to handle legacy format
+            row = self._normalize_csv_row(raw_row)
             result.total_rows += 1
 
             try:
@@ -324,54 +511,47 @@ class SubscriptionService:
 
                 subscription_id = row.get('subscription_id', '').strip()
 
-                # Look up category and subcategory IDs
+                # Look up or create category and subcategory
                 category_name = row.get('category_name', '').strip()
                 subcategory_name = row.get('subcategory_name', '').strip()
-                category_id = categories.get(category_name) if category_name else None
-                subcategory_id = None
-                if category_id and subcategory_name:
-                    subcategory_id = subcategories.get((category_id, subcategory_name))
+                category_id = self._get_or_create_category(category_name, categories_cache)
+                subcategory_id = self._get_or_create_subcategory(
+                    subcategory_name, category_id, subcategories_cache
+                ) if category_id else None
 
                 # Parse boolean fields
                 in_lastpass = None
                 in_lastpass_str = row.get('in_lastpass', '').strip().lower()
-                if in_lastpass_str in ('yes', 'true', '1'):
+                if in_lastpass_str in ('yes', 'true', '1', 'y'):
                     in_lastpass = True
-                elif in_lastpass_str in ('no', 'false', '0'):
+                elif in_lastpass_str in ('no', 'false', '0', 'n'):
                     in_lastpass = False
 
-                # Parse enum fields
+                # Parse enum fields using normalization helpers
                 status = SubscriptionStatus.ACTIVE
                 status_str = row.get('status', '').strip()
                 if status_str:
-                    status = SubscriptionStatus(status_str)
+                    try:
+                        status = SubscriptionStatus(status_str)
+                    except ValueError:
+                        # Default to Active if invalid status
+                        status = SubscriptionStatus.ACTIVE
 
-                value_level = None
-                value_level_str = row.get('value_level', '').strip()
-                if value_level_str:
-                    value_level = ValueLevel(value_level_str)
-
-                payment_frequency = None
-                payment_freq_str = row.get('payment_frequency', '').strip()
-                if payment_freq_str:
-                    payment_frequency = PaymentFrequency(payment_freq_str)
+                value_level = self._normalize_value_level(row.get('value_level', ''))
+                payment_frequency = self._normalize_payment_frequency(row.get('payment_frequency', ''))
 
                 # Parse numeric fields
                 annual_cost = None
                 annual_cost_str = row.get('annual_cost', '').strip()
                 if annual_cost_str:
-                    annual_cost = Decimal(annual_cost_str)
+                    # Remove non-numeric chars except decimal point
+                    cleaned = ''.join(c for c in annual_cost_str if c.isdigit() or c == '.')
+                    if cleaned:
+                        annual_cost = Decimal(cleaned)
 
-                # Parse date fields
-                renewal_date = None
-                renewal_date_str = row.get('renewal_date', '').strip()
-                if renewal_date_str:
-                    renewal_date = date.fromisoformat(renewal_date_str)
-
-                last_confirmed_alive = None
-                last_confirmed_str = row.get('last_confirmed_alive', '').strip()
-                if last_confirmed_str:
-                    last_confirmed_alive = date.fromisoformat(last_confirmed_str)
+                # Parse date fields using flexible parser
+                renewal_date = self._parse_date_flexible(row.get('renewal_date', ''))
+                last_confirmed_alive = self._parse_date_flexible(row.get('last_confirmed_alive', ''))
 
                 # Check if subscription exists
                 existing = None
@@ -408,6 +588,7 @@ class SubscriptionService:
                     existing.email_volume_per_week = row.get('email_volume_per_week', '').strip() or None
                     existing.main_vendor_contact = row.get('main_vendor_contact', '').strip() or None
                     existing.actions_todos = row.get('actions_todos', '').strip() or None
+                    existing.notes = row.get('notes', '').strip() or None
                     existing.last_confirmed_alive = last_confirmed_alive
                     existing.access_level_required = row.get('access_level_required', '').strip() or None
 
@@ -448,10 +629,12 @@ class SubscriptionService:
                         email_volume_per_week=row.get('email_volume_per_week', '').strip() or None,
                         main_vendor_contact=row.get('main_vendor_contact', '').strip() or None,
                         actions_todos=row.get('actions_todos', '').strip() or None,
+                        notes=row.get('notes', '').strip() or None,
                         last_confirmed_alive=last_confirmed_alive,
                         access_level_required=row.get('access_level_required', '').strip() or None,
                     )
                     self.db.add(subscription)
+                    self.db.flush()  # Make insert visible for next ID generation
                     result.created += 1
 
             except Exception as e:

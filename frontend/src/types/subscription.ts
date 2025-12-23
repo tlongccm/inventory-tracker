@@ -24,7 +24,7 @@ export interface SubscriptionListItem {
   link: string | null;
   authentication: string | null;
   username: string | null;
-  password_masked: string | null;
+  password: string | null;
   in_lastpass: boolean | null;
   access_level_required: string | null;
 
@@ -33,6 +33,7 @@ export interface SubscriptionListItem {
   cost: string | null;
   annual_cost: number | null;
   payment_frequency: PaymentFrequency | null;
+  notes: string | null;
 
   // Communication View fields
   subscriber_email: string | null;
@@ -71,6 +72,7 @@ export interface Subscription {
   cost: string | null;
   annual_cost: number | null;
   payment_frequency: PaymentFrequency | null;
+  notes: string | null;
   renewal_date: string | null;
   last_confirmed_alive: string | null;
   main_vendor_contact: string | null;
@@ -104,6 +106,7 @@ export interface SubscriptionCreate {
   cost?: string | null;
   annual_cost?: number | null;
   payment_frequency?: PaymentFrequency | null;
+  notes?: string | null;
   renewal_date?: string | null;
   last_confirmed_alive?: string | null;
   main_vendor_contact?: string | null;
@@ -133,6 +136,7 @@ export interface SubscriptionUpdate {
   cost?: string | null;
   annual_cost?: number | null;
   payment_frequency?: PaymentFrequency | null;
+  notes?: string | null;
   renewal_date?: string | null;
   last_confirmed_alive?: string | null;
   main_vendor_contact?: string | null;
