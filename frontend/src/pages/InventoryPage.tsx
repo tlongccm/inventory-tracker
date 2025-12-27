@@ -2,11 +2,10 @@
  * InventoryPage - main page combining equipment list, detail view, and actions.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type {
   Equipment,
   EquipmentListItem,
-  EquipmentFilters,
   EquipmentCreate,
   EquipmentUpdate,
   AssignmentHistoryItem,
@@ -22,10 +21,9 @@ import {
   exportEquipment,
   importEquipment,
 } from '../services/api';
-import EquipmentList from '../components/EquipmentList';
+import EquipmentList, { type EquipmentListHandle } from '../components/EquipmentList';
 import EquipmentDetail from '../components/EquipmentDetail';
 import EquipmentForm from '../components/EquipmentForm';
-import FilterBar from '../components/FilterBar';
 import AssignmentHistory from '../components/AssignmentHistory';
 import ImportModal from '../components/ImportModal';
 import ReassignmentModal from '../components/ReassignmentModal';
@@ -33,8 +31,6 @@ import ViewGroupToggle from '../components/ViewGroupToggle';
 import SearchBox from '../components/SearchBox';
 import ShareLinkButton from '../components/ShareLinkButton';
 import { useViewPreferences } from '../hooks/useViewPreferences';
-import { useColumnWidths } from '../hooks/useColumnWidths';
-import { getVisibleColumns } from '../utils/columns';
 import { filterEquipment, validateRegex } from '../utils/search';
 import { useSearchParams } from 'react-router-dom';
 import { parseUrlParams, serializeFilters } from '../utils/urlParams';
@@ -49,17 +45,6 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<EquipmentFilters>(() => {
-    // Initialize filters from URL params
-    const params = parseUrlParams(searchParams);
-    const initialFilters: EquipmentFilters = {};
-    if (params.equipment_type) initialFilters.equipment_type = params.equipment_type as EquipmentFilters['equipment_type'];
-    if (params.status) initialFilters.status = params.status as EquipmentFilters['status'];
-    if (params.location) initialFilters.location = params.location as string;
-    if (params.sort) initialFilters.sort_by = params.sort as EquipmentFilters['sort_by'];
-    if (params.order) initialFilters.sort_order = params.order as 'asc' | 'desc';
-    return initialFilters;
-  });
 
   // Modal states
   const [showForm, setShowForm] = useState(false);
@@ -70,21 +55,16 @@ export default function InventoryPage() {
   const [showImport, setShowImport] = useState(false);
   const [reassignEquipment, setReassignEquipment] = useState<Equipment | null>(null);
 
-  // View preferences and search state
+  // View preferences and refs
   const { preferences, toggleGroup } = useViewPreferences();
-  const { widths: columnWidths, setColumnWidth } = useColumnWidths();
+  const equipmentListRef = useRef<EquipmentListHandle>(null);
   const [searchTerm, setSearchTerm] = useState(() => {
     const params = parseUrlParams(searchParams);
     return (params.search as string) || '';
   });
   const [isRegex, setIsRegex] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-
-  // Calculate visible columns based on preferences
-  const visibleColumns = useMemo(
-    () => getVisibleColumns(preferences),
-    [preferences]
-  );
+  const [hasActiveFilters, setHasActiveFilters] = useState(false);
 
   // Filter equipment based on search term
   const filteredEquipment = useMemo(() => {
@@ -133,32 +113,27 @@ export default function InventoryPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await listEquipment(filters);
+      const data = await listEquipment({});
       setEquipment(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load equipment');
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     loadEquipment();
   }, [loadEquipment]);
 
-  // Sync filters and search to URL
+  // Sync search to URL
   useEffect(() => {
     const urlParams: Record<string, string | undefined> = {};
-    if (filters.equipment_type) urlParams.equipment_type = filters.equipment_type;
-    if (filters.status) urlParams.status = filters.status;
-    if (filters.location) urlParams.location = filters.location;
-    if (filters.sort_by) urlParams.sort = filters.sort_by;
-    if (filters.sort_order) urlParams.order = filters.sort_order;
     if (searchTerm.trim()) urlParams.search = searchTerm;
 
     const newParams = serializeFilters(urlParams);
     setSearchParams(newParams, { replace: true });
-  }, [filters, searchTerm, setSearchParams]);
+  }, [searchTerm, setSearchParams]);
 
   // Select equipment to view details
   const handleSelect = async (equipmentId: string) => {
@@ -258,19 +233,6 @@ export default function InventoryPage() {
     return result;
   };
 
-  // Open reassignment modal
-  const handleOpenReassign = async (equipmentId: string) => {
-    try {
-      setDetailLoading(true);
-      const data = await getEquipment(equipmentId);
-      setReassignEquipment(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load equipment');
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
   // Handle reassignment save
   const handleReassignSave = async (data: EquipmentUpdate) => {
     if (!reassignEquipment) return;
@@ -284,25 +246,15 @@ export default function InventoryPage() {
     }
   };
 
-  // Filter change
-  const handleFilterChange = (newFilters: EquipmentFilters) => {
-    setFilters(newFilters);
-  };
-
-  // Clear filters
+  // Clear grid column filters
   const handleClearFilters = () => {
-    setFilters({});
+    equipmentListRef.current?.resetFiltersAndSort();
   };
 
-  // Handle column sort
-  const handleSort = (field: string) => {
-    const newOrder = filters.sort_by === field && filters.sort_order === 'asc' ? 'desc' : 'asc';
-    setFilters({
-      ...filters,
-      sort_by: field as EquipmentFilters['sort_by'],
-      sort_order: newOrder,
-    });
-  };
+  // Handle grid filter change notification
+  const handleGridFilterChanged = useCallback((hasFilters: boolean) => {
+    setHasActiveFilters(hasFilters);
+  }, []);
 
   return (
     <div>
@@ -330,15 +282,13 @@ export default function InventoryPage() {
             Import CSV
           </button>
           <ShareLinkButton />
+          {hasActiveFilters && (
+            <button className="secondary" onClick={handleClearFilters}>
+              Reset Filters
+            </button>
+          )}
         </div>
       </div>
-
-      {/* Filter Bar */}
-      <FilterBar
-        filters={filters}
-        onChange={handleFilterChange}
-        onClear={handleClearFilters}
-      />
 
       {/* Search Box */}
       <SearchBox
@@ -354,22 +304,17 @@ export default function InventoryPage() {
 
       {/* Equipment List */}
       <EquipmentList
+        ref={equipmentListRef}
         equipment={filteredEquipment}
         loading={loading}
         onSelect={handleSelect}
-        onReassign={handleOpenReassign}
-        selectedId={selectedEquipment?.equipment_id}
-        sortBy={filters.sort_by}
-        sortOrder={filters.sort_order}
-        onSort={handleSort}
-        visibleColumns={visibleColumns}
         noResultsMessage={
           searchTerm.trim()
             ? `No equipment matches "${searchTerm}"`
             : undefined
         }
-        columnWidths={columnWidths}
-        onColumnResize={setColumnWidth}
+        viewPreferences={preferences}
+        onFilterChanged={handleGridFilterChanged}
       />
 
       {/* Detail Modal */}

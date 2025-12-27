@@ -1,122 +1,148 @@
 /**
- * EquipmentList component - displays equipment in a table with configurable columns.
- * Supports sortable columns and user-resizable column widths.
+ * EquipmentList component - displays equipment using AG Grid Enterprise.
+ * Supports additive view groups where multiple views can be active simultaneously.
  */
 
-import { useRef, useCallback } from 'react';
+import { useMemo, useCallback, useRef, useImperativeHandle, forwardRef, useEffect } from 'react';
+import { AgGridReact } from 'ag-grid-react';
+import type { RowClickedEvent, FilterChangedEvent, GridReadyEvent, GridApi } from 'ag-grid-community';
 import type { EquipmentListItem } from '../types/equipment';
-import type { ColumnDefinition } from '../config/columns';
-import MarkdownRenderer from './MarkdownRenderer';
+import type { ViewPreferences, ViewGroupKey } from '../types/viewGroups';
+import {
+  VIEW_GROUP_COL_IDS,
+  defaultColDef,
+  statusBarConfig,
+  getInitialColumnDefs,
+} from '../config/equipmentGridColumns';
+import StatusCellRenderer from './grid/StatusCellRenderer';
+import MarkdownCellRenderer from './grid/MarkdownCellRenderer';
 
 interface EquipmentListProps {
   equipment: EquipmentListItem[];
   loading: boolean;
   onSelect: (equipmentId: string) => void;
-  onReassign?: (equipmentId: string) => void;
-  selectedId?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  onSort?: (field: string) => void;
-  visibleColumns: ColumnDefinition[];
   noResultsMessage?: string;
-  // Column width management
-  columnWidths: Record<string, number>;
-  onColumnResize?: (column: string, width: number) => void;
+  viewPreferences: ViewPreferences;
+  onFilterChanged?: (hasActiveFilters: boolean) => void;
 }
 
-// Columns that should have fixed width (not resizable)
-const FIXED_WIDTH_COLUMNS = new Set<string>();
-
-function getStatusClass(status: string): string {
-  switch (status) {
-    case 'Active':
-      return 'status-active';
-    case 'Inactive':
-      return 'status-inactive';
-    case 'Decommissioned':
-      return 'status-decommissioned';
-    case 'In Repair':
-      return 'status-in-repair';
-    case 'In Storage':
-      return 'status-in-storage';
-    default:
-      return '';
-  }
+// Ref handle for external control
+export interface EquipmentListHandle {
+  resetFiltersAndSort: () => void;
+  hasActiveFilters: () => boolean;
 }
 
-/**
- * Formats a cell value for display.
- */
-function formatCellValue(value: unknown): string {
-  if (value === null || value === undefined) {
-    return '-';
-  }
-  if (typeof value === 'number') {
-    return value.toLocaleString();
-  }
-  return String(value);
-}
-
-export default function EquipmentList({
+const EquipmentList = forwardRef<EquipmentListHandle, EquipmentListProps>(function EquipmentList({
   equipment,
   loading,
   onSelect,
-  onReassign,
-  selectedId,
-  sortBy,
-  sortOrder,
-  onSort,
-  visibleColumns,
   noResultsMessage,
-  columnWidths,
-  onColumnResize,
-}: EquipmentListProps) {
-  const resizingRef = useRef<{
-    column: string;
-    startX: number;
-    startWidth: number;
-  } | null>(null);
+  viewPreferences,
+  onFilterChanged,
+}, ref) {
+  // Grid ref for API access
+  const gridRef = useRef<AgGridReact<EquipmentListItem>>(null);
+  const gridApiRef = useRef<GridApi<EquipmentListItem> | null>(null);
 
-  // Handle mouse down on resize handle
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent, column: string, currentWidth: number) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      resizingRef.current = {
-        column,
-        startX: e.clientX,
-        startWidth: currentWidth,
-      };
-
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        if (!resizingRef.current) return;
-
-        const delta = moveEvent.clientX - resizingRef.current.startX;
-        const newWidth = Math.max(30, resizingRef.current.startWidth + delta);
-        onColumnResize?.(resizingRef.current.column, newWidth);
-      };
-
-      const handleMouseUp = () => {
-        resizingRef.current = null;
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      };
-
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    resetFiltersAndSort: () => {
+      if (gridApiRef.current) {
+        // Clear all column filters
+        gridApiRef.current.setFilterModel(null);
+        // Reset column sort state
+        gridApiRef.current.applyColumnState({
+          defaultState: { sort: null },
+        });
+      }
     },
-    [onColumnResize]
-  );
+    hasActiveFilters: () => {
+      if (!gridApiRef.current) return false;
+      const filterModel = gridApiRef.current.getFilterModel();
+      return Object.keys(filterModel || {}).length > 0;
+    },
+  }), []);
 
+  // Update column visibility when view preferences change
+  useEffect(() => {
+    const api = gridApiRef.current;
+    if (!api) return;
+
+    // For each view group (except 'full' meta-toggle)
+    for (const [groupKey, colIds] of Object.entries(VIEW_GROUP_COL_IDS)) {
+      if (groupKey === 'full') continue;
+      const isVisible = viewPreferences[groupKey as ViewGroupKey];
+      api.setColumnsVisible(colIds, isVisible);
+    }
+
+    // Handle 'full' meta-toggle: if enabled, show all view group columns
+    if (viewPreferences.full) {
+      const allGroupColIds = Object.entries(VIEW_GROUP_COL_IDS)
+        .filter(([key]) => key !== 'full')
+        .flatMap(([, colIds]) => colIds);
+      // Remove duplicates (overall_rating appears in both summary and performance)
+      const uniqueColIds = [...new Set(allGroupColIds)];
+      api.setColumnsVisible(uniqueColIds, true);
+    }
+  }, [viewPreferences]);
+
+  // Column definitions with initial visibility based on preferences
+  const columnDefs = useMemo(() => {
+    return getInitialColumnDefs(viewPreferences);
+  }, [viewPreferences]);
+
+  // Row selection configuration (no checkboxes - selection via row click only)
+  const rowSelection = useMemo(() => ({
+    mode: 'singleRow' as const,
+    checkboxes: false,
+    enableClickSelection: true,
+  }), []);
+
+  // Handle row click to open detail modal
+  const onRowClicked = useCallback((event: RowClickedEvent<EquipmentListItem>) => {
+    if (event.data) {
+      onSelect(event.data.equipment_id);
+    }
+  }, [onSelect]);
+
+  // Handle filter changes to notify parent
+  const handleFilterChanged = useCallback((event: FilterChangedEvent) => {
+    if (onFilterChanged) {
+      const filterModel = event.api.getFilterModel();
+      const hasFilters = Object.keys(filterModel || {}).length > 0;
+      onFilterChanged(hasFilters);
+    }
+  }, [onFilterChanged]);
+
+  // Custom cell renderer components
+  const components = useMemo(() => ({
+    StatusCellRenderer,
+    MarkdownCellRenderer,
+  }), []);
+
+  // Handle grid ready - store API reference
+  const onGridReady = useCallback((params: GridReadyEvent<EquipmentListItem>) => {
+    gridApiRef.current = params.api;
+  }, []);
+
+  // Calculate minimum width based on active view groups
+  // Base (680) + Status (100) = 780px minimum
+  // Add view group widths when enabled
+  const gridMinWidth = useMemo(() => {
+    let width = 780; // Base columns + status
+    if (viewPreferences.summary) width += 730;
+    if (viewPreferences.spec) width += 1160;
+    if (viewPreferences.performance) width += 400; // 510 minus shared overall_rating
+    if (viewPreferences.history) width += 800;
+    return width;
+  }, [viewPreferences]);
+
+  // Loading state
   if (loading) {
     return <div className="loading">Loading equipment...</div>;
   }
 
+  // Empty state
   if (equipment.length === 0) {
     if (noResultsMessage) {
       return (
@@ -130,137 +156,41 @@ export default function EquipmentList({
       <div className="empty-state">
         <h3>No equipment found</h3>
         <p>No equipment is currently tracked in the inventory.</p>
-        <p>Click "Add Equipment" to add the first record.</p>
+        <p>Click "Add" to add the first record.</p>
       </div>
     );
   }
 
-  const ResizableHeader = ({
-    field,
-    label,
-    sortable,
-    width,
-  }: {
-    field: string;
-    label: string;
-    sortable: boolean;
-    width: number;
-  }) => {
-    const isActive = sortBy === field;
-    const indicator = isActive
-      ? sortOrder === 'asc'
-        ? '▲'
-        : '▼'
-      : sortable
-        ? '⇅'
-        : null;
-    const isResizable = !FIXED_WIDTH_COLUMNS.has(field);
-
-    return (
-      <th
-        onClick={() => sortable && onSort?.(field)}
-        className={`${sortable ? 'sortable' : ''} ${isResizable ? 'resizable' : ''}`.trim()}
-        data-column={field}
-        style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
-      >
-        <div className="th-content">
-          {label}
-          {indicator && (
-            <span className={`sort-indicator ${isActive ? 'active' : ''}`}>
-              {indicator}
-            </span>
-          )}
-        </div>
-        {onColumnResize && isResizable && (
-          <div
-            className="resize-handle"
-            onMouseDown={(e) => handleResizeStart(e, field, width)}
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
-      </th>
-    );
-  };
-
-  // Calculate total table width from column widths
-  const actionsColumnWidth = onReassign ? 85 : 0;
-  const totalTableWidth = visibleColumns.reduce(
-    (sum, col) => sum + (columnWidths[col.key] || 60),
-    actionsColumnWidth
-  );
-
   return (
-    <div className="table-wrapper">
-      <table className="resizable-table" style={{ width: `${totalTableWidth}px`, maxWidth: `${totalTableWidth}px` }}>
-        <thead>
-          <tr>
-            {visibleColumns.map((col) => (
-              <ResizableHeader
-                key={col.key}
-                field={col.key}
-                label={col.label}
-                sortable={col.sortable}
-                width={columnWidths[col.key] || 60}
-              />
-            ))}
-            {onReassign && <th style={{ width: '85px', minWidth: '85px', maxWidth: '85px' }}>Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-        {equipment.map((item) => (
-          <tr
-            key={item.equipment_id}
-            onClick={() => onSelect(item.equipment_id)}
-            style={{
-              cursor: 'pointer',
-              backgroundColor:
-                selectedId === item.equipment_id ? '#e3f2fd' : undefined,
-            }}
-          >
-            {visibleColumns.map((col) => {
-              const value = item[col.key as keyof EquipmentListItem];
-              const width = columnWidths[col.key] || 60;
-              // Special handling for status column
-              if (col.key === 'status') {
-                return (
-                  <td key={col.key} data-column={col.key} style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}>
-                    <span className={`status-badge ${getStatusClass(item.status || 'Active')}`}>
-                      {item.status || 'Active'}
-                    </span>
-                  </td>
-                );
-              }
-              // Special handling for notes column - render markdown
-              if (col.key === 'notes' && value) {
-                return (
-                  <td key={col.key} data-column={col.key} style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}>
-                    <MarkdownRenderer content={String(value)} />
-                  </td>
-                );
-              }
-              return (
-                <td key={col.key} data-column={col.key} style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}>
-                  {formatCellValue(value)}
-                </td>
-              );
-            })}
-            {onReassign && (
-              <td style={{ width: '85px', minWidth: '85px', maxWidth: '85px' }}>
-                <button
-                  className="action-btn reassign"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onReassign(item.equipment_id);
-                  }}
-                >
-                  Reassign
-                </button>
-              </td>
-            )}
-          </tr>
-        ))}
-        </tbody>
-      </table>
+    <div className="ag-grid-wrapper">
+      <div className="ag-grid-container" style={{ width: '100%', overflowX: 'auto' }}>
+        <div style={{ minWidth: `${gridMinWidth}px`, height: '100%' }}>
+          <AgGridReact<EquipmentListItem>
+            ref={gridRef}
+            rowData={equipment}
+            columnDefs={columnDefs}
+            defaultColDef={defaultColDef}
+            rowSelection={rowSelection}
+            onRowClicked={onRowClicked}
+            onFilterChanged={handleFilterChanged}
+            onGridReady={onGridReady}
+            animateRows={true}
+            suppressCellFocus={true}
+            enableCellTextSelection={true}
+            tooltipShowDelay={500}
+            domLayout="normal"
+            suppressColumnVirtualisation={true}
+            alwaysShowHorizontalScroll={true}
+            alwaysShowVerticalScroll={false}
+            scrollbarWidth={10}
+            cellSelection={true}
+            statusBar={statusBarConfig}
+            components={components}
+          />
+        </div>
+      </div>
     </div>
   );
-}
+});
+
+export default EquipmentList;
