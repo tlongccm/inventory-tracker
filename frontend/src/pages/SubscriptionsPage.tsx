@@ -19,13 +19,11 @@ import {
   deleteSubscription,
   exportSubscriptions,
   importSubscriptions,
-  listSubscriptionOwners,
 } from '../services/api';
 import { useCategories } from '../contexts/CategoryContext';
 import SubscriptionList, { SubscriptionListHandle } from '../components/SubscriptionList';
 import SubscriptionDetail from '../components/SubscriptionDetail';
 import SubscriptionForm from '../components/SubscriptionForm';
-import SubscriptionFilterBar from '../components/SubscriptionFilterBar';
 import SubscriptionImportModal from '../components/SubscriptionImportModal';
 import ShareLinkButton from '../components/ShareLinkButton';
 import SearchBox from '../components/SearchBox';
@@ -56,18 +54,13 @@ export default function SubscriptionsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SubscriptionFilters>(() => {
-    // Initialize filters from URL params
+    // Initialize sort from URL params
     const params = parseUrlParams(searchParams);
     const initialFilters: SubscriptionFilters = {};
-    if (params.status) initialFilters.status = params.status as SubscriptionFilters['status'];
-    if (params.category_id) initialFilters.category_id = params.category_id as number;
-    if (params.ccm_owner) initialFilters.ccm_owner = params.ccm_owner as string;
-    if (params.value_level) initialFilters.value_level = params.value_level as SubscriptionFilters['value_level'];
     if (params.sort) initialFilters.sort_by = params.sort as string;
     if (params.order) initialFilters.sort_order = params.order as 'asc' | 'desc';
     return initialFilters;
   });
-  const [owners, setOwners] = useState<string[]>([]);
 
   // Modal states
   const [showForm, setShowForm] = useState(false);
@@ -187,29 +180,13 @@ export default function SubscriptionsPage() {
     }
   }, [filters]);
 
-  // Load owners for filter dropdown
-  const loadOwners = useCallback(async () => {
-    try {
-      const data = await listSubscriptionOwners();
-      setOwners(data);
-    } catch (err) {
-      // Non-critical error, just log it
-      console.error('Failed to load owners:', err);
-    }
-  }, []);
-
   useEffect(() => {
     loadSubscriptions();
-    loadOwners();
-  }, [loadSubscriptions, loadOwners]);
+  }, [loadSubscriptions]);
 
-  // Sync filters and search to URL
+  // Sync sort and search to URL
   useEffect(() => {
     const urlParams: Record<string, string | number | undefined> = {};
-    if (filters.status) urlParams.status = filters.status;
-    if (filters.category_id) urlParams.category_id = filters.category_id;
-    if (filters.ccm_owner) urlParams.ccm_owner = filters.ccm_owner;
-    if (filters.value_level) urlParams.value_level = filters.value_level;
     if (filters.sort_by) urlParams.sort = filters.sort_by;
     if (filters.sort_order) urlParams.order = filters.sort_order;
     if (searchTerm.trim()) urlParams.search = searchTerm;
@@ -299,16 +276,6 @@ export default function SubscriptionsPage() {
     const result = await importSubscriptions(file);
     loadSubscriptions();
     return result;
-  };
-
-  // Filter change
-  const handleFilterChange = (newFilters: SubscriptionFilters) => {
-    setFilters(newFilters);
-  };
-
-  // Clear filters
-  const handleClearFilters = () => {
-    setFilters({});
   };
 
   // Handle search change
@@ -414,11 +381,10 @@ export default function SubscriptionsPage() {
 
   // Check if any filters are active (for showing Reset button state)
   const hasAnyFilters = useMemo(() => {
-    const hasPageFilters = !!(filters.status || filters.category_id || filters.ccm_owner || filters.value_level);
     const hasSort = !!(filters.sort_by || filters.sort_order);
     const hasSearch = !!searchTerm.trim();
     const hasViewPrefs = Object.values(viewPreferences).some(v => v);
-    return hasPageFilters || hasSort || hasSearch || hasGridFilters || hasViewPrefs;
+    return hasSort || hasSearch || hasGridFilters || hasViewPrefs;
   }, [filters, searchTerm, hasGridFilters, viewPreferences]);
 
   return (
@@ -457,15 +423,6 @@ export default function SubscriptionsPage() {
           <ShareLinkButton />
         </div>
       </div>
-
-      {/* Filter Bar */}
-      <SubscriptionFilterBar
-        filters={filters}
-        categories={categories}
-        owners={owners}
-        onChange={handleFilterChange}
-        onClear={handleClearFilters}
-      />
 
       {/* Search Box */}
       <SearchBox
