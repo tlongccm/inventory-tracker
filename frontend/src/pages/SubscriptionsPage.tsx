@@ -324,15 +324,6 @@ export default function SubscriptionsPage() {
 
     // Reset groups expanded state when switching views (groups start collapsed)
     setGroupsExpanded(false);
-
-    // Auto-sort by access_level_required when entering AI Tools view
-    if (group === 'ai_tools' && !viewPreferences.ai_tools) {
-      setFilters((prev) => ({
-        ...prev,
-        sort_by: 'access_level_required',
-        sort_order: 'asc',
-      }));
-    }
   };
 
   // Handle column sort
