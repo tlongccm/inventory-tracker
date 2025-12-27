@@ -8,7 +8,7 @@ import type { ColDef, RowClickedEvent, SortChangedEvent, ValueGetterParams, Valu
 import type { SubscriptionListItem, RenewalStatus } from '../types/subscription';
 
 // View mode type for pivot table switching
-type SubscriptionViewMode = 'default' | 'ai_tools' | 'by_distribution' | 'by_authentication';
+type SubscriptionViewMode = 'default' | 'ai_tools' | 'sa_resources' | 'by_distribution' | 'by_authentication';
 
 // URL Cell Renderer Component
 function UrlCellRenderer(props: ICellRendererParams) {
@@ -229,6 +229,16 @@ const BY_AUTHENTICATION_COLUMNS: ColDef<SubscriptionListItem>[] = [
   { field: 'provider', headerName: 'Provider', width: 200 },
 ];
 
+// SA Resources view columns - flat list with credential focus
+// Displays Active + Consultant subscriptions for quick credential lookup
+const SA_RESOURCES_COLUMNS: ColDef<SubscriptionListItem>[] = [
+  { field: 'provider', headerName: 'Provider', width: 200 },
+  { field: 'link', headerName: 'URL', width: 250, cellRenderer: UrlCellRenderer },
+  { field: 'ccm_owner', headerName: 'CCM Owner', width: 150 },
+  { field: 'username', headerName: 'Username', width: 180 },
+  { field: 'password', headerName: 'Password', width: 150 },
+];
+
 // T005: Auto group column configuration for By Distribution view
 const distributionGroupColumnDef: ColDef<SubscriptionListItem> = {
   headerName: 'Destination Email',
@@ -310,6 +320,8 @@ const SubscriptionList = forwardRef<SubscriptionListHandle, SubscriptionListProp
     switch (viewMode) {
       case 'ai_tools':
         return AI_TOOLS_COLUMNS;
+      case 'sa_resources':
+        return SA_RESOURCES_COLUMNS;
       case 'by_distribution':
         return BY_DISTRIBUTION_COLUMNS;
       case 'by_authentication':
@@ -334,7 +346,8 @@ const SubscriptionList = forwardRef<SubscriptionListHandle, SubscriptionListProp
   }, [viewMode]);
 
   // T011, T016: Determine if current view is a grouped view
-  const isGroupedView = viewMode !== 'default';
+  // SA Resources is a flat list (no grouping), so it's not considered a grouped view
+  const isGroupedView = viewMode !== 'default' && viewMode !== 'sa_resources';
 
   // Default column properties - prevent auto-sizing, enable filtering via column menu
   const defaultColDef = useMemo<ColDef>(() => ({

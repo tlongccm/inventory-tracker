@@ -98,6 +98,8 @@ export default function SubscriptionsPage() {
   // T007: Derive active view mode from viewPreferences (needed for filtering)
   const activeViewMode = viewPreferences.ai_tools
     ? 'ai_tools'
+    : viewPreferences.sa_resources
+    ? 'sa_resources'
     : viewPreferences.by_distribution
     ? 'by_distribution'
     : viewPreferences.by_authentication
@@ -122,6 +124,13 @@ export default function SubscriptionsPage() {
     // T013: For By Authentication view, filter to only Active subscriptions
     if (activeViewMode === 'by_authentication') {
       result = result.filter((sub) => sub.status === 'Active');
+    }
+
+    // For SA Resources view, filter to Active + Consultant access level
+    if (activeViewMode === 'sa_resources') {
+      result = result.filter(
+        (sub) => sub.status === 'Active' && sub.access_level_required === 'Consultant'
+      );
     }
 
     // Apply search filter
