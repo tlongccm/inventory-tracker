@@ -2,7 +2,7 @@
  * SubscriptionsPage - main page for subscription management.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type {
   Subscription,
   SubscriptionListItem,
@@ -22,7 +22,7 @@ import {
   listSubscriptionOwners,
 } from '../services/api';
 import { useCategories } from '../contexts/CategoryContext';
-import SubscriptionList from '../components/SubscriptionList';
+import SubscriptionList, { SubscriptionListHandle } from '../components/SubscriptionList';
 import SubscriptionDetail from '../components/SubscriptionDetail';
 import SubscriptionForm from '../components/SubscriptionForm';
 import SubscriptionFilterBar from '../components/SubscriptionFilterBar';
@@ -34,13 +34,13 @@ import { parseUrlParams, serializeFilters } from '../utils/urlParams';
 import { validateRegex } from '../utils/search';
 
 // Subscription view group configuration
-const SUBSCRIPTION_VIEW_GROUP_KEYS = ['ai_tools', 'sa_resources', 'by_distribution', 'by_category'] as const;
+const SUBSCRIPTION_VIEW_GROUP_KEYS = ['ai_tools', 'sa_resources', 'by_distribution', 'by_authentication'] as const;
 type SubscriptionViewGroupKey = typeof SUBSCRIPTION_VIEW_GROUP_KEYS[number];
 const SUBSCRIPTION_VIEW_GROUP_LABELS: Record<SubscriptionViewGroupKey, string> = {
   ai_tools: 'AI Tools',
   sa_resources: 'SA Resources',
   by_distribution: 'By Distribution',
-  by_category: 'By Category',
+  by_authentication: 'By Authentication',
 };
 
 export default function SubscriptionsPage() {
@@ -82,31 +82,64 @@ export default function SubscriptionsPage() {
   const [isRegex, setIsRegex] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
+  // Grid ref for reset functionality
+  const gridRef = useRef<SubscriptionListHandle>(null);
+  const [hasGridFilters, setHasGridFilters] = useState(false);
+  const [groupsExpanded, setGroupsExpanded] = useState(false);
+
   // View group preferences (placeholder - will control column visibility in future)
   const [viewPreferences, setViewPreferences] = useState<Record<SubscriptionViewGroupKey, boolean>>({
     ai_tools: false,
     sa_resources: false,
     by_distribution: false,
-    by_category: false,
+    by_authentication: false,
   });
 
-  // Filter subscriptions based on search term (client-side, supports regex)
+  // T007: Derive active view mode from viewPreferences (needed for filtering)
+  const activeViewMode = viewPreferences.ai_tools
+    ? 'ai_tools'
+    : viewPreferences.by_distribution
+    ? 'by_distribution'
+    : viewPreferences.by_authentication
+    ? 'by_authentication'
+    : 'default';
+
+  // Filter subscriptions based on search term and view mode (client-side, supports regex)
   const filteredSubscriptions = useMemo(() => {
+    // Start with all subscriptions
+    let result = subscriptions;
+
+    // For AI Tools view, filter to only "AI Tool" category and Active status
+    if (activeViewMode === 'ai_tools') {
+      result = result.filter((sub) => sub.category_name === 'AI Tool' && sub.status === 'Active');
+    }
+
+    // T008: For By Distribution view, filter to only Active subscriptions
+    if (activeViewMode === 'by_distribution') {
+      result = result.filter((sub) => sub.status === 'Active');
+    }
+
+    // T013: For By Authentication view, filter to only Active subscriptions
+    if (activeViewMode === 'by_authentication') {
+      result = result.filter((sub) => sub.status === 'Active');
+    }
+
+    // Apply search filter
     if (!searchTerm.trim()) {
       setSearchError(null);
-      return subscriptions;
+      return result;
     }
 
     if (isRegex) {
       const validation = validateRegex(searchTerm);
       if (!validation.valid) {
         setSearchError(validation.error || 'Invalid regex');
-        return subscriptions;
+        return result;
       }
       setSearchError(null);
       try {
         const regex = new RegExp(searchTerm, 'i');
-        return subscriptions.filter((sub) =>
+        return result.filter((sub) =>
           regex.test(sub.subscription_id) ||
           regex.test(sub.provider) ||
           (sub.category_name && regex.test(sub.category_name)) ||
@@ -115,13 +148,13 @@ export default function SubscriptionsPage() {
           (sub.subscriber_email && regex.test(sub.subscriber_email))
         );
       } catch {
-        return subscriptions;
+        return result;
       }
     }
 
     setSearchError(null);
     const term = searchTerm.toLowerCase();
-    return subscriptions.filter((sub) =>
+    return result.filter((sub) =>
       sub.subscription_id.toLowerCase().includes(term) ||
       sub.provider.toLowerCase().includes(term) ||
       (sub.category_name && sub.category_name.toLowerCase().includes(term)) ||
@@ -129,7 +162,7 @@ export default function SubscriptionsPage() {
       (sub.description_value && sub.description_value.toLowerCase().includes(term)) ||
       (sub.subscriber_email && sub.subscriber_email.toLowerCase().includes(term))
     );
-  }, [subscriptions, searchTerm, isRegex]);
+  }, [subscriptions, searchTerm, isRegex, activeViewMode]);
 
   // Load subscriptions list
   const loadSubscriptions = useCallback(async () => {
@@ -301,7 +334,7 @@ export default function SubscriptionsPage() {
           ai_tools: false,
           sa_resources: false,
           by_distribution: false,
-          by_category: false,
+          by_authentication: false,
         };
       }
       // Otherwise, select only the clicked button
@@ -309,9 +342,21 @@ export default function SubscriptionsPage() {
         ai_tools: group === 'ai_tools',
         sa_resources: group === 'sa_resources',
         by_distribution: group === 'by_distribution',
-        by_category: group === 'by_category',
+        by_authentication: group === 'by_authentication',
       };
     });
+
+    // Reset groups expanded state when switching views (groups start collapsed)
+    setGroupsExpanded(false);
+
+    // Auto-sort by access_level_required when entering AI Tools view
+    if (group === 'ai_tools' && !viewPreferences.ai_tools) {
+      setFilters((prev) => ({
+        ...prev,
+        sort_by: 'access_level_required',
+        sort_order: 'asc',
+      }));
+    }
   };
 
   // Handle column sort
@@ -323,6 +368,49 @@ export default function SubscriptionsPage() {
       sort_order: newOrder,
     });
   };
+
+  // Reset all filters (page filters, grid filters, search, and sort)
+  const handleResetAll = useCallback(() => {
+    // Clear page-level filters
+    setFilters({});
+    // Clear search
+    setSearchTerm('');
+    setSearchError(null);
+    // Reset grid column filters and sort
+    gridRef.current?.resetFiltersAndSort();
+    setHasGridFilters(false);
+    // Reset view preferences
+    setViewPreferences({
+      ai_tools: false,
+      sa_resources: false,
+      by_distribution: false,
+      by_authentication: false,
+    });
+  }, []);
+
+  // Handle grid filter changes
+  const handleGridFilterChanged = useCallback((hasFilters: boolean) => {
+    setHasGridFilters(hasFilters);
+  }, []);
+
+  // Toggle expand/collapse all groups in pivot view
+  const handleToggleGroups = useCallback(() => {
+    if (groupsExpanded) {
+      gridRef.current?.collapseAllGroups();
+    } else {
+      gridRef.current?.expandAllGroups();
+    }
+    setGroupsExpanded(!groupsExpanded);
+  }, [groupsExpanded]);
+
+  // Check if any filters are active (for showing Reset button state)
+  const hasAnyFilters = useMemo(() => {
+    const hasPageFilters = !!(filters.status || filters.category_id || filters.ccm_owner || filters.value_level);
+    const hasSort = !!(filters.sort_by || filters.sort_order);
+    const hasSearch = !!searchTerm.trim();
+    const hasViewPrefs = Object.values(viewPreferences).some(v => v);
+    return hasPageFilters || hasSort || hasSearch || hasGridFilters || hasViewPrefs;
+  }, [filters, searchTerm, hasGridFilters, viewPreferences]);
 
   return (
     <div>
@@ -348,6 +436,14 @@ export default function SubscriptionsPage() {
           </button>
           <button className="secondary" onClick={() => setShowImport(true)}>
             Import CSV
+          </button>
+          <button
+            className={`secondary ${hasAnyFilters ? 'reset-active' : ''}`}
+            onClick={handleResetAll}
+            disabled={!hasAnyFilters}
+            title="Reset all filters, sorting, and search"
+          >
+            Reset
           </button>
           <ShareLinkButton />
         </div>
@@ -383,10 +479,20 @@ export default function SubscriptionsPage() {
             {SUBSCRIPTION_VIEW_GROUP_LABELS[group]}
           </button>
         ))}
+        {activeViewMode !== 'default' && (
+          <button
+            className={`toggle-chip ${groupsExpanded ? 'active' : ''}`}
+            onClick={handleToggleGroups}
+            type="button"
+          >
+            {groupsExpanded ? 'Collapse All' : 'Expand All'}
+          </button>
+        )}
       </div>
 
       {/* Subscription List */}
       <SubscriptionList
+        ref={gridRef}
         subscriptions={filteredSubscriptions}
         loading={loading || categoriesLoading}
         onSelect={handleSelect}
@@ -394,11 +500,13 @@ export default function SubscriptionsPage() {
         sortBy={filters.sort_by}
         sortOrder={filters.sort_order}
         onSort={handleSort}
+        onFilterChanged={handleGridFilterChanged}
         noResultsMessage={
           searchTerm.trim()
             ? `No subscriptions match "${searchTerm}"`
             : undefined
         }
+        viewMode={activeViewMode}
       />
 
       {/* Detail Modal */}

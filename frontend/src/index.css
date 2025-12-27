@@ -263,6 +263,21 @@ button.secondary:hover {
   background-color: var(--bg-hover);
 }
 
+button.secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondary.reset-active {
+  background-color: var(--status-info-bg);
+  border-color: var(--status-info);
+  color: var(--status-info);
+}
+
+button.secondary.reset-active:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
 button.danger {
   background-color: var(--status-danger);
   border-color: var(--status-danger);
@@ -1163,4 +1178,186 @@ td .markdown-content p + p::before {
 .share-link-btn svg {
   width: 14px;
   height: 14px;
+}
+
+/* AG Grid Wrapper - contains toolbar and grid, sticks to top when scrolled */
+.ag-grid-wrapper {
+  position: sticky;
+  top: 60px;
+  z-index: 50;
+  background-color: var(--bg-secondary);
+  /* Height allows the grid to fill viewport when sticky */
+  height: calc(100vh - 70px);
+  display: flex;
+  flex-direction: column;
+  /* Constrain width to viewport to force horizontal scrolling */
+  max-width: 100vw;
+  overflow: hidden;
+}
+
+/* AG Grid Toolbar - page size selector */
+.ag-grid-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-size-selector label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+
+.page-size-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-size-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.page-size-btn.active {
+  background-color: var(--accent-purple);
+  border-color: var(--accent-purple);
+  color: white;
+}
+
+.record-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+/* AG Grid Styles - Match Equipment table styling */
+.ag-grid-container {
+  --ag-font-family: 'Roboto Condensed', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ag-font-size: 12px;
+  --ag-row-height: 28px;
+  --ag-header-height: 32px;
+  --ag-header-foreground-color: navy;
+  --ag-header-background-color: var(--bg-secondary);
+  --ag-odd-row-background-color: var(--bg-secondary);
+  --ag-background-color: var(--bg-secondary);
+  --ag-border-color: var(--border-light);
+  --ag-row-border-color: var(--border-light);
+  --ag-header-column-separator-color: transparent;
+  --ag-cell-horizontal-padding: 10px;
+  background-color: var(--bg-secondary);
+  /* Fill remaining space in flex container */
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  /* Ensure horizontal scrolling is possible */
+  overflow-x: auto;
+}
+
+.ag-grid-container .ag-header-cell-text {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: navy !important;
+}
+
+.ag-grid-container .ag-header-cell-label {
+  color: navy !important;
+}
+
+.ag-grid-container .ag-header-cell {
+  color: navy !important;
+}
+
+.ag-grid-container .ag-row:hover {
+  background-color: var(--bg-hover);
+}
+
+.ag-grid-container .ag-row.selected {
+  background-color: var(--accent-purple-bg);
+}
+
+.ag-grid-container .ag-cell {
+  line-height: 28px;
+}
+
+/* Renewal status row colors */
+.ag-grid-container .ag-row.renewal-overdue {
+  background-color: var(--status-danger-bg);
+}
+
+.ag-grid-container .ag-row.renewal-urgent {
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.ag-grid-container .ag-row.renewal-warning {
+  background-color: var(--status-warning-bg);
+}
+
+.ag-grid-container .ag-row.renewal-ok {
+  background-color: var(--bg-secondary);
+}
+
+/* T017: Group label styling for Excel-like pivot display */
+.ag-grid-container .group-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Ensure AG Grid scrollbars are visible */
+.ag-grid-container .ag-root-wrapper {
+  border: 1px solid var(--border-light);
+}
+
+.ag-grid-container .ag-body-horizontal-scroll {
+  display: block !important;
+  visibility: visible !important;
+  height: 12px !important;
+  min-height: 12px !important;
+  opacity: 1 !important;
+}
+
+/* Force horizontal scrollbar to always show */
+.ag-grid-container .ag-body-viewport {
+  overflow-x: scroll !important;
+}
+
+.ag-grid-container .ag-body-horizontal-scroll-viewport {
+  overflow-x: scroll !important;
+}
+
+/* Custom scrollbar styling for webkit browsers */
+.ag-grid-container ::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+}
+
+.ag-grid-container ::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+}
+
+.ag-grid-container ::-webkit-scrollbar-track {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure scrollbar container has proper height */
+.ag-grid-container .ag-body-horizontal-scroll-container {
+  min-height: 1px;
 }
